@@ -3,11 +3,13 @@
  * Motor puro (sin DOM): crea el estado inicial, aplica decisiones y
  * genera el resumen final. Inspirado en el género de "simuladores de
  * carrera por decisiones" (elige tu propia aventura futbolística),
- * con eventos y textos propios.
+ * con eventos y textos propios. Incluye mercado de pases con clubes
+ * reales (nombre + insignia generada) y estadísticas por club.
  */
 (function (global) {
   // Listado completo de países (nombre + bandera), definido en carrera-countries.js
   const COUNTRIES = global.GameHub.CarreraCountries.COUNTRIES;
+  const Clubs = global.GameHub.CarreraClubs;
 
   const POSITIONS = [
     { id: 'portero', label: 'Portero' },
@@ -34,10 +36,12 @@
     { id: 'dc', label: 'Delantero centro', short: 'DC', group: 'delantero', x: 50, y: 10 },
   ];
 
-  const CLUB_TIERS = [
-    'Club de barrio', 'Segunda división', 'Primera división local',
-    'Club continental', 'Liga europea media', 'Liga europea grande',
-  ];
+  const AWARD_NAMES = {
+    portero: ['Guante de Oro del torneo', 'Mejor arquero de la liga', 'Valla menos vencida'],
+    defensa: ['Mejor defensor de la liga', 'Equipo ideal del torneo', 'Muro de la temporada'],
+    mediocampista: ['Mejor mediocampista de la liga', 'Asistente del torneo', 'Equipo ideal del torneo'],
+    delantero: ['Bota de Oro de la liga', 'Máximo goleador del torneo', 'Jugador revelación'],
+  };
 
   function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
@@ -66,14 +70,6 @@
       options: [
         { label: 'Jugar el próximo partido igual', effects: { level: 2, injuryRisk: 12, morale: -1 }, text: 'Decides no perderte minutos importantes, a pesar del riesgo.' },
         { label: 'Pedir descanso y tratamiento preventivo', effects: { injuryRisk: -10, reputation: -1 }, text: 'El cuerpo médico agradece la prudencia; te pierdes un par de partidos.' },
-      ],
-    },
-    {
-      id: 'oferta-prestamo', title: 'Oferta de préstamo', positions: null,
-      desc: 'Un club de menor categoría ofrece llevarte a préstamo para que sumes minutos como titular.',
-      options: [
-        { label: 'Aceptar el préstamo', effects: { level: 3, reputation: -3, marketValueAdd: -1 }, text: 'Ganas experiencia como titular, aunque bajas tu perfil momentáneamente.', club: 'lower' },
-        { label: 'Quedarte a pelear tu lugar', effects: { morale: -3, reputation: 2 }, text: 'Te quedas a competir de igual a igual por la titularidad.' },
       ],
     },
     {
@@ -117,14 +113,6 @@
       ],
     },
     {
-      id: 'oferta-exterior', title: 'Interés desde el exterior', positions: null,
-      desc: 'Un ojeador de una liga extranjera pregunta por tu situación contractual.',
-      options: [
-        { label: 'Buscar dar el salto', effects: { reputation: 5, marketValueAdd: 3, morale: 2 }, text: 'Se abre la puerta para dar el salto al fútbol internacional.', club: 'upgrade' },
-        { label: 'Quedarte donde ya eres importante', effects: { morale: 3 }, text: 'Prefieres la comodidad de un lugar donde ya eres referente.' },
-      ],
-    },
-    {
       id: 'lesion-seria', title: 'Lesión de consideración', positions: null,
       desc: 'Un mal gesto en un entrenamiento te deja una lesión que requiere varios meses de recuperación.',
       options: [
@@ -140,6 +128,14 @@
         { label: 'Mantener un perfil bajo', effects: { morale: 1 }, text: 'Prefieres concentrarte solo en tu rendimiento individual.' },
       ],
     },
+    {
+      id: 'entrenador-nuevo', title: 'Cambio de entrenador', positions: null,
+      desc: 'El club destituye al técnico y llega un nuevo cuerpo técnico con ideas distintas.',
+      options: [
+        { label: 'Adaptarte rápido al nuevo esquema', effects: { level: 3, morale: 1 }, text: 'Te ganas la confianza del nuevo entrenador desde el primer día.' },
+        { label: 'Mantener tu estilo de siempre', effects: { morale: -2, reputation: 1 }, text: 'Cuesta un poco encajar, pero no perdés tu identidad.' },
+      ],
+    },
   ];
 
   // Eventos específicos según posición, para variar el sabor de la carrera.
@@ -149,23 +145,23 @@
       desc: 'Llevas varios partidos consecutivos marcando gol y la prensa empieza a hablar de vos.',
       options: [
         { label: 'Buscar romper el récord del club', effects: { level: 3, reputation: 5, morale: -1 }, text: 'La racha se vuelve historia del club.' },
-        { label: 'Jugar en función del equipo', effects: { reputation: 2, morale: 3 }, text: 'Priorizas el funcionamiento colectivo por sobre la estadística personal.' },
+        { label: 'Priorizar el juego colectivo', effects: { level: 1, morale: 3 }, text: 'Sacrificás protagonismo individual por el funcionamiento del equipo.' },
       ],
     }],
     mediocampista: [{
-      id: 'distribucion-juego', title: 'El técnico te pide más responsabilidad de juego', positions: ['mediocampista'],
-      desc: 'Te piden ser el encargado de manejar los tiempos del equipo desde la mitad de cancha.',
+      id: 'motor-mediocampo', title: 'El motor del equipo', positions: ['mediocampista'],
+      desc: 'El entrenador te pide correr cada balón dividido y ser el enlace entre defensa y ataque.',
       options: [
-        { label: 'Asumir el mando del mediocampo', effects: { level: 3, reputation: 4 }, text: 'Te conviertes en el metrónomo del equipo.' },
-        { label: 'Priorizar el trabajo defensivo', effects: { level: 2, injuryRisk: -2 }, text: 'Ganas fama de mediocampista equilibrado y confiable.' },
+        { label: 'Asumir el doble rol sin quejarte', effects: { level: 3, injuryRisk: 4 }, text: 'Te convertís en pieza indispensable del mediocampo.' },
+        { label: 'Pedir un rol más específico', effects: { morale: 2, level: 1 }, text: 'Ganás comodidad, aunque cedés algo de protagonismo.' },
       ],
     }],
     defensa: [{
-      id: 'valla-invicta', title: 'El equipo pelea el arco menos vencido', positions: ['defensa'],
-      desc: 'Faltan pocas fechas y la defensa pelea el premio a la valla menos vencida del torneo.',
+      id: 'muro-defensivo', title: 'El muro de la defensa', positions: ['defensa'],
+      desc: 'La prensa empieza a destacar tu solidez defensiva partido tras partido.',
       options: [
-        { label: 'Jugar cada pelota como si fuera la última', effects: { level: 3, reputation: 4, injuryRisk: 5 }, text: 'Cierran el torneo con una de las mejores defensas.' },
-        { label: 'Cuidar la tarjeta y jugar con cautela', effects: { reputation: 1, injuryRisk: -3 }, text: 'Sostienes el nivel sin arriesgar de más.' },
+        { label: 'Salir a buscar cada duelo', effects: { level: 3, injuryRisk: 5, reputation: 3 }, text: 'Te ganás fama de intratable en el uno contra uno.' },
+        { label: 'Jugar con inteligencia posicional', effects: { level: 2, injuryRisk: -2 }, text: 'Ganás partidos leyendo el juego antes que con la fuerza.' },
       ],
     }],
     portero: [{
@@ -184,6 +180,7 @@
 
   function createCareer({ surname, number, foot, country, position, positionDetail }) {
     const spot = POSITION_SPOTS.find((s) => s.id === positionDetail) || null;
+    const club = Clubs.pickStartClub(country.code);
     return {
       surname, number, foot, country, position,
       positionDetail: spot ? spot.label : null,
@@ -196,8 +193,8 @@
       morale: 60,
       injuryRisk: 10,
       marketValue: 0.3,
-      clubTier: 0,
       matches: 0,
+      wins: 0,
       goals: 0,
       assists: 0,
       cleanSheets: 0,
@@ -205,47 +202,83 @@
       injuries: 0,
       collectiveTitles: 0,
       individualAwards: 0,
+      individualAwardNames: [],
       peakLevel: 45,
       peakMarketValue: 0.3,
       usedEventIds: [],
       retired: false,
       log: [],
+      // --- club actual y su historial ---
+      club,
+      onLoan: false,
+      stint: { club, ageFrom: 17, matches: 0, wins: 0, goals: 0, titles: 0 },
+      clubHistory: [],
+      // --- selección nacional ---
+      national: { matches: 0, wins: 0, goals: 0, trophies: 0 },
     };
   }
 
   function pickEvent(state) {
+    // A partir del segundo tramo, hay probabilidad de que se abra el
+    // mercado de pases en lugar de un evento narrativo normal.
+    if (state.period > 0 && Math.random() < 0.42) {
+      const offers = Clubs.pickOffers(state.club, 2);
+      if (offers.length) {
+        return {
+          id: `mercado-${state.period}`, market: true,
+          title: 'Mercado de pases',
+          desc: 'Llegaron ofertas después de tu último tramo de carrera. Podés aceptar una o quedarte en tu club.',
+          offers,
+        };
+      }
+    }
     const pool = buildEventPool(state.position).filter((e) => !state.usedEventIds.includes(e.id));
     const available = pool.length ? pool : buildEventPool(state.position);
     return available[Math.floor(Math.random() * available.length)];
   }
 
-  function applyChoice(state, event, option) {
-    const e = option.effects || {};
-    state.level = clamp(state.level + (e.level || 0), 1, 99);
-    state.reputation = clamp(state.reputation + (e.reputation || 0), 0, 100);
-    state.morale = clamp(state.morale + (e.morale || 0), 0, 100);
-    state.injuryRisk = clamp(state.injuryRisk + (e.injuryRisk || 0), 0, 90);
-    state.marketValue = Math.max(0.1, state.marketValue + (e.marketValueAdd || 0));
-    if (option.caps) state.caps += 1 + Math.floor(state.level / 40);
-    if (option.club === 'upgrade') state.clubTier = clamp(state.clubTier + 1, 0, CLUB_TIERS.length - 1);
-    if (option.club === 'lower') state.clubTier = clamp(state.clubTier - 1, 0, CLUB_TIERS.length - 1);
-    state.usedEventIds.push(event.id);
+  function finalizeStint(state) {
+    const s = state.stint;
+    if (!s) return;
+    state.clubHistory.push({
+      club: s.club, ageFrom: s.ageFrom, ageTo: state.age,
+      matches: s.matches, wins: s.wins, goals: s.goals, titles: s.titles,
+    });
+  }
 
-    // --- Simulación de la temporada: partidos, goles, asistencias ---
+  function openStint(state) {
+    state.stint = { club: state.club, ageFrom: state.age, matches: 0, wins: 0, goals: 0, titles: 0 };
+  }
+
+  // --- Simulación de una temporada (partidos, goles/vallas, lesión, títulos, premios) ---
+  function simulateSeason(state) {
     const matchesPlayed = 30 + Math.floor((state.level / 99) * 30) - (state.injuryRisk > 50 ? 8 : 0);
+    const clubTier = state.club.tier;
+    const winRate = clamp(0.32 + (state.level - 50) / 220 + (6 - clubTier) * 0.035, 0.1, 0.85);
+    const wins = Math.round(matchesPlayed * winRate);
+
     state.matches += matchesPlayed;
+    state.wins += wins;
+    state.stint.matches += matchesPlayed;
+    state.stint.wins += wins;
+
+    let goalsThisSeason = 0;
     if (state.position === 'delantero') {
-      state.goals += Math.round(matchesPlayed * (state.level / 260));
+      goalsThisSeason = Math.round(matchesPlayed * (state.level / 260));
       state.assists += Math.round(matchesPlayed * (state.level / 500));
     } else if (state.position === 'mediocampista') {
-      state.goals += Math.round(matchesPlayed * (state.level / 700));
+      goalsThisSeason = Math.round(matchesPlayed * (state.level / 700));
       state.assists += Math.round(matchesPlayed * (state.level / 260));
     } else if (state.position === 'defensa') {
-      state.goals += Math.round(matchesPlayed * (state.level / 1400));
+      goalsThisSeason = Math.round(matchesPlayed * (state.level / 1400));
       state.assists += Math.round(matchesPlayed * (state.level / 700));
     } else {
+      // Portero: "goles" = goles recibidos (a menor nivel, más goles recibidos).
+      goalsThisSeason = Math.max(0, Math.round(matchesPlayed * (1 - winRate) * 0.9));
       state.cleanSheets += Math.round(matchesPlayed * (state.level / 350));
     }
+    state.goals += goalsThisSeason;
+    state.stint.goals += goalsThisSeason;
 
     // --- Lesión aleatoria ---
     let injuryText = null;
@@ -257,10 +290,11 @@
 
     // --- Título de equipo (según nivel de club y del jugador) ---
     let titleText = null;
-    const titleChance = 8 + state.clubTier * 6 + Math.floor(state.level / 8);
+    const titleChance = 8 + (6 - clubTier) * 6 + Math.floor(state.level / 8);
     if (Math.random() * 100 < titleChance) {
       state.collectiveTitles += 1;
-      titleText = `¡Campeón con ${CLUB_TIERS[state.clubTier]}!`;
+      state.stint.titles += 1;
+      titleText = `¡Campeón con ${state.club.name}!`;
     }
 
     // --- Premio individual ---
@@ -268,7 +302,10 @@
     const awardChance = Math.floor(state.level / 5) + Math.floor(state.reputation / 10);
     if (Math.random() * 100 < awardChance) {
       state.individualAwards += 1;
-      awardText = 'Fuiste distinguido como una de las figuras del semestre.';
+      const pool = AWARD_NAMES[state.position] || AWARD_NAMES.mediocampista;
+      const award = pool[Math.floor(Math.random() * pool.length)];
+      state.individualAwardNames.push(award);
+      awardText = `Fuiste distinguido: "${award}".`;
     }
 
     state.marketValue = Math.round(Math.max(0.1, state.marketValue + state.level / 25 - 1) * 10) / 10;
@@ -278,7 +315,7 @@
     state.log.push({
       ageFrom: state.age,
       ageTo: state.age + 2,
-      clubTier: state.clubTier,
+      club: state.club,
       level: state.level,
       champion: Boolean(titleText),
       award: Boolean(awardText),
@@ -289,7 +326,57 @@
     state.period += 1;
     if (state.age > 33 || state.level <= 5) state.retired = true;
 
+    if (state.retired) finalizeStint(state);
+
     return { injuryText, titleText, awardText };
+  }
+
+  function applyChoice(state, event, option) {
+    const e = option.effects || {};
+    state.level = clamp(state.level + (e.level || 0), 1, 99);
+    state.reputation = clamp(state.reputation + (e.reputation || 0), 0, 100);
+    state.morale = clamp(state.morale + (e.morale || 0), 0, 100);
+    state.injuryRisk = clamp(state.injuryRisk + (e.injuryRisk || 0), 0, 90);
+    state.marketValue = Math.max(0.1, state.marketValue + (e.marketValueAdd || 0));
+    if (option.caps) {
+      const gain = 1 + Math.floor(state.level / 40);
+      state.caps += gain;
+      const natWinRate = clamp(0.3 + (state.level - 50) / 180 + state.reputation / 300, 0.1, 0.9);
+      state.national.matches += gain;
+      state.national.wins += Math.round(gain * natWinRate);
+      if (state.position !== 'portero') {
+        state.national.goals += Math.round(gain * (state.level / 400));
+      } else {
+        state.national.goals += Math.round(gain * (1 - natWinRate) * 0.6);
+      }
+      if (!state.national.trophies && state.level >= 78 && state.reputation >= 55 && Math.random() < 0.14) {
+        state.national.trophies += 1;
+      }
+    }
+    state.usedEventIds.push(event.id);
+
+    const result = simulateSeason(state);
+    return { ...result, choiceText: option.text };
+  }
+
+  // Aplica una decisión del mercado de pases: fichar por un club nuevo
+  // (permanente o a préstamo) o quedarse en el actual.
+  function applyMarketChoice(state, chosenClub, isLoan) {
+    let transferText;
+    if (chosenClub && chosenClub.id !== state.club.id) {
+      finalizeStint(state);
+      state.club = chosenClub;
+      state.onLoan = Boolean(isLoan);
+      openStint(state);
+      transferText = isLoan
+        ? `Salís a préstamo: ${chosenClub.flag} ${chosenClub.name} (${chosenClub.league}).`
+        : `¡Fichaje confirmado! Nuevo club: ${chosenClub.flag} ${chosenClub.name} (${chosenClub.league}).`;
+    } else {
+      state.onLoan = false;
+      transferText = `Decidís continuar en ${state.club.name}.`;
+    }
+    const result = simulateSeason(state);
+    return { ...result, choiceText: transferText };
   }
 
   function careerTitle(state) {
@@ -306,15 +393,16 @@
       `⚽ ${careerTitle(state)} ⚽`,
       `${state.surname} #${state.number} — ${posLabel} (${state.country.flag} ${state.country.name})`,
       `Nivel máximo: ${state.peakLevel} · Valor máximo: €${state.peakMarketValue}M`,
-      `${state.matches} partidos${state.position !== 'portero' ? ` · ${state.goals} goles · ${state.assists} asistencias` : ` · ${state.cleanSheets} vallas invictas`}`,
+      `${state.matches} PJ · ${state.wins} victorias · ${state.position === 'portero' ? `${state.goals} goles recibidos` : `${state.goals} goles`}`,
       `${state.collectiveTitles} títulos de equipo · ${state.individualAwards} premios individuales · ${state.caps} veces convocado a la selección`,
+      `Último club: ${state.club.name} (${state.club.league})`,
       `Retiro a los ${state.age} años, tras ${state.injuries} lesión(es) importante(s).`,
     ].join('\n');
   }
 
   global.GameHub = global.GameHub || {};
   global.GameHub.CarreraEngine = {
-    COUNTRIES, POSITIONS, CLUB_TIERS, POSITION_SPOTS,
-    createCareer, pickEvent, applyChoice, careerTitle, shareText,
+    COUNTRIES, POSITIONS, POSITION_SPOTS,
+    createCareer, pickEvent, applyChoice, applyMarketChoice, careerTitle, shareText,
   };
 })(window);

@@ -395,6 +395,85 @@
   padding: 3px 0;
 }
 
+/* --- Franja de club actual en la tarjeta de jugador --- */
+
+.cr-club-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+.cr-club-crest { flex-shrink: 0; display: flex; line-height: 0; }
+.cr-club-strip-text { display: flex; flex-direction: column; min-width: 0; }
+.cr-club-strip-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--ink-100);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cr-club-strip-name em { color: var(--gold-500); font-style: normal; font-weight: 600; font-size: 0.78rem; }
+.cr-club-strip-league {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--ink-500);
+  letter-spacing: 0.03em;
+}
+
+/* --- Tarjetas de mercado de pases --- */
+
+.cr-market-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.cr-market-card {
+  flex: 1 1 150px;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: var(--felt-900);
+  border: 1px solid rgba(246, 239, 221, 0.1);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-2);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  text-align: center;
+}
+.cr-market-card:hover {
+  border-color: var(--gold-500);
+  transform: translateY(-2px);
+  background: var(--felt-800);
+}
+.cr-market-card.cr-market-stay { border-style: dashed; }
+.cr-market-tag {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+.cr-market-crest { line-height: 0; margin: 2px 0; }
+.cr-market-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--ink-100);
+}
+.cr-market-league {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--ink-500);
+}
+
 /* --- Línea de tiempo de temporadas --- */
 
 .cr-timeline { padding: var(--space-2) var(--space-2) var(--space-3); }
@@ -417,7 +496,8 @@
 .cr-tl-row { border-radius: var(--radius-sm); }
 .cr-tl-row + .cr-tl-row { margin-top: 2px; }
 .cr-tl-age { font-family: var(--font-mono); color: var(--ink-300); }
-.cr-tl-club { color: var(--ink-300); }
+.cr-tl-club { color: var(--ink-300); display: flex; align-items: center; line-height: 0; }
+.cr-tl-club svg { display: block; }
 .cr-tl-ovr { font-family: var(--font-mono); color: var(--ink-100); text-align: right; }
 .cr-tl-badges { font-size: 0.72rem; text-align: right; }
 
@@ -430,25 +510,128 @@
 /* ---------- Resumen final ---------- */
 
 .cr-summary {
-  max-width: 700px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: var(--space-4);
 }
 
-.cr-summary-head {
+.cr-summary-top {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+@media (max-width: 800px) {
+  .cr-summary-top { grid-template-columns: 1fr; }
+}
+
+.cr-summary-box {
+  background: var(--felt-900);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.cr-summary-main h2 { margin: 4px 0 6px; font-size: 1.5rem; }
+.cr-summary-main-row { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-2); }
+.cr-summary-pos-num {
+  font-family: var(--font-mono);
+  color: var(--ink-500);
+  font-size: 0.85rem;
+}
+.cr-summary-main-meta {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  justify-content: space-between;
+  border-top: 1px solid var(--felt-600);
+  border-bottom: 1px solid var(--felt-600);
+  padding: var(--space-2) 0;
   margin-bottom: var(--space-2);
 }
-.cr-summary-head .sub { color: var(--ink-300); margin-top: 4px; }
-
-.cr-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--space-2);
-  margin: var(--space-3) 0;
+.cr-summary-main-meta span {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--ink-500);
+  letter-spacing: 0.05em;
 }
+.cr-summary-main-meta span b {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--ink-100);
+  font-weight: 700;
+}
+
+.cr-summary-main-stats,
+.cr-summary-national .cr-summary-main-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.cr-summary-main-stats div {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 8px 4px;
+  text-align: center;
+}
+.cr-summary-main-stats b { display: block; font-family: var(--font-display); font-size: 1.1rem; color: var(--ink-100); }
+.cr-summary-main-stats span { font-family: var(--font-mono); font-size: 0.62rem; color: var(--ink-500); }
+
+.cr-national-head { display: flex; align-items: center; gap: 8px; margin: 4px 0 var(--space-2); }
+.cr-national-head h3 { font-size: 1.05rem; margin: 0; }
+.cr-national-trophy {
+  margin-top: var(--space-2);
+  text-align: center;
+  background: rgba(217, 164, 65, 0.14);
+  color: var(--gold-500);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.cr-summary-awards .cr-awards-list { margin-top: var(--space-2); }
+.cr-summary-awards .cr-empty-note { margin-top: var(--space-3); text-align: center; }
+
+.cr-clubs-title {
+  font-size: 1.1rem;
+  color: var(--ink-300);
+  margin-bottom: var(--space-2);
+}
+
+.cr-club-cards {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.cr-club-card {
+  flex: 0 0 160px;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  border: 1px solid rgba(246, 239, 221, 0.08);
+}
+.cr-club-card-crest { margin-bottom: 4px; line-height: 0; }
+.cr-club-card h4 { margin: 0; font-size: 0.92rem; color: var(--ink-100); }
+.cr-club-card-age { font-family: var(--font-mono); font-size: 0.6rem; color: var(--ink-500); margin-bottom: 6px; }
+.cr-club-card-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: 100%;
+}
+.cr-club-card-stats div { background: rgba(0, 0, 0, 0.2); border-radius: 6px; padding: 4px 2px; }
+.cr-club-card-stats b { display: block; font-family: var(--font-display); font-size: 0.92rem; color: var(--ink-100); }
+.cr-club-card-stats span { font-family: var(--font-mono); font-size: 0.56rem; color: var(--ink-500); }
+.cr-club-card-trophies { margin-top: 6px; font-size: 0.85rem; }
+
+.cr-summary-footnote { margin-bottom: var(--space-3); }
 
 .cr-stat-card {
   background: var(--felt-900);

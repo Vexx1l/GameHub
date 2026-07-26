@@ -1,11 +1,10 @@
 (function (global) {
   const Engine = global.GameHub.CarreraEngine;
   const Countries = global.GameHub.CarreraCountries;
+  const Clubs = global.GameHub.CarreraClubs;
 
   const DEFAULT_COUNTRY = Countries.COUNTRIES.find((c) => c.name === 'Colombia') || Countries.COUNTRIES[0];
   const DEFAULT_SPOT_ID = 'mc';
-
-  const TIER_ABBR = ['CB', 'D2', 'D1', 'CONT', 'UE-M', 'UE-G'];
 
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, (c) => ({
@@ -18,6 +17,13 @@
     if (level >= 65) return 'cr-ovr-good';
     if (level >= 50) return 'cr-ovr-mid';
     return 'cr-ovr-low';
+  }
+
+  // Etiqueta de la 3ª estadística (PJ / VI / GR) según posición.
+  function grLabel(position) { return position === 'portero' ? 'GR' : 'GR'; }
+
+  function badge(club, size) {
+    return Clubs.badgeSvg(club, size || 40);
   }
 
   function mount(container, config) {
@@ -199,10 +205,8 @@
     // ---------- Tarjeta de jugador (reutilizada en la simulación) ----------
 
     function playerCardHtml() {
-      const contribLabel = state.position === 'portero' ? 'Vallas invictas' : 'Goles + asist.';
-      const contribValue = state.position === 'portero'
-        ? state.cleanSheets
-        : state.goals + state.assists;
+      const grValue = state.position === 'portero' ? state.goals : state.goals;
+      const grText = state.position === 'portero' ? 'Goles recibidos' : 'Goles';
       const trophyCount = state.collectiveTitles + state.individualAwards;
       return `
         <div class="cr-player-card">
@@ -213,19 +217,26 @@
             </div>
             <div class="cr-player-id">
               <span class="cr-flag-chip">${state.country.flag} ${state.positionShort || ''}</span>
-              <h3>${state.surname} <span class="mono">#${state.number}</span></h3>
+              <h3>${escapeHtml(state.surname)} <span class="mono">#${state.number}</span></h3>
               <p class="sub">${state.positionDetail || Engine.POSITIONS.find((p) => p.id === state.position).label} · ${state.country.name}</p>
+            </div>
+          </div>
+          <div class="cr-club-strip">
+            <span class="cr-club-crest">${badge(state.club, 30)}</span>
+            <div class="cr-club-strip-text">
+              <span class="cr-club-strip-name">${escapeHtml(state.club.name)}${state.onLoan ? ' <em>(préstamo)</em>' : ''}</span>
+              <span class="cr-club-strip-league">${escapeHtml(state.club.flag)} ${escapeHtml(state.club.league)}</span>
             </div>
           </div>
           <div class="cr-player-meta">
             <div class="cr-meta-item"><span class="cr-meta-k">EDAD</span><span class="cr-meta-v">${state.age}</span></div>
-            <div class="cr-meta-item"><span class="cr-meta-k">CLUB</span><span class="cr-meta-v cr-club-pill">${TIER_ABBR[state.clubTier]}</span></div>
             <div class="cr-meta-item"><span class="cr-meta-k">VALOR</span><span class="cr-meta-v">€${state.marketValue}M</span></div>
+            <div class="cr-meta-item"><span class="cr-meta-k">CAPS</span><span class="cr-meta-v">${state.caps}</span></div>
           </div>
           <div class="cr-stat-icons">
-            <div class="cr-stat-icon"><span class="cr-stat-glyph cr-glyph-pj">▤</span><b>${state.matches}</b><span>PJ</span></div>
-            <div class="cr-stat-icon"><span class="cr-stat-glyph cr-glyph-gr">⚽</span><b>${contribValue}</b><span>${state.position === 'portero' ? 'VI' : 'GR'}</span></div>
-            <div class="cr-stat-icon"><span class="cr-stat-glyph cr-glyph-vi">🏆</span><b>${trophyCount}</b><span>VIT</span></div>
+            <div class="cr-stat-icon"><b>${state.matches}</b><span>PJ</span></div>
+            <div class="cr-stat-icon"><b>${state.wins}</b><span>VI</span></div>
+            <div class="cr-stat-icon" title="${grText}"><b>${grValue}</b><span>${grLabel(state.position)}</span></div>
           </div>
           <div class="cr-trophy-case">
             ${trophyCount === 0 && state.caps === 0
@@ -252,7 +263,7 @@
           rows.push(`
             <div class="cr-tl-row cr-tl-done">
               <span class="cr-tl-age">${ageFrom}</span>
-              <span class="cr-tl-club">${TIER_ABBR[entry.clubTier]}</span>
+              <span class="cr-tl-club" title="${escapeHtml(entry.club.name)}">${badge(entry.club, 20)}</span>
               <span class="cr-tl-ovr">${entry.level}</span>
               <span class="cr-tl-badges">${badges}</span>
             </div>
@@ -261,7 +272,7 @@
           rows.push(`
             <div class="cr-tl-row cr-tl-current">
               <span class="cr-tl-age">${ageFrom}</span>
-              <span class="cr-tl-club">En juego…</span>
+              <span class="cr-tl-club" title="${escapeHtml(state.club.name)}">${badge(state.club, 20)}</span>
               <span class="cr-tl-ovr">${state.level}</span>
               <span class="cr-tl-badges"></span>
             </div>
@@ -287,10 +298,11 @@
       `;
     }
 
-    // ---------- Pantalla de simulación (temporada / evento) ----------
+    // ---------- Pantalla de simulación (temporada / evento / mercado) ----------
 
     function renderPeriod() {
       const event = Engine.pickEvent(state);
+      const midColHtml = event.market ? marketPanelHtml(event) : narrativePanelHtml(event);
       container.innerHTML = `
         ${topbar()}
         <div class="cr-progress">
@@ -304,12 +316,7 @@
             ${playerCardHtml()}
           </div>
           <div class="cr-dash-col-mid panel cr-event">
-            <span class="eyebrow">Temporada ${state.period + 1}</span>
-            <h2>${escapeHtml(event.title)}</h2>
-            <p>${escapeHtml(event.desc)}</p>
-            <div class="cr-options" id="cr-options">
-              ${event.options.map((o, i) => `<button class="btn btn-primary cr-option-btn" data-index="${i}">${escapeHtml(o.label)}</button>`).join('')}
-            </div>
+            ${midColHtml}
           </div>
           <div class="cr-dash-col-right">
             ${timelineHtml()}
@@ -317,17 +324,68 @@
         </div>
       `;
       bindBack(container);
-      container.querySelectorAll('.cr-option-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const option = event.options[Number(btn.dataset.index)];
-          const result = Engine.applyChoice(state, event, option);
-          renderResult(option, result);
+
+      if (event.market) {
+        container.querySelectorAll('.cr-market-card').forEach((card) => {
+          card.addEventListener('click', () => {
+            const idx = card.dataset.offer;
+            let chosenClub = null;
+            let loan = false;
+            if (idx !== 'stay') {
+              const offer = event.offers[Number(idx)];
+              chosenClub = offer.club;
+              loan = offer.loan;
+            }
+            const result = Engine.applyMarketChoice(state, chosenClub, loan);
+            renderResult(result);
+          });
         });
-      });
+      } else {
+        container.querySelectorAll('.cr-option-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const option = event.options[Number(btn.dataset.index)];
+            const result = Engine.applyChoice(state, event, option);
+            renderResult(result);
+          });
+        });
+      }
     }
 
-    function renderResult(option, result) {
-      const extras = [option.text, result.injuryText, result.titleText, result.awardText].filter(Boolean);
+    function narrativePanelHtml(event) {
+      return `
+        <span class="eyebrow">Temporada ${state.period + 1}</span>
+        <h2>${escapeHtml(event.title)}</h2>
+        <p>${escapeHtml(event.desc)}</p>
+        <div class="cr-options" id="cr-options">
+          ${event.options.map((o, i) => `<button class="btn btn-primary cr-option-btn" data-index="${i}">${escapeHtml(o.label)}</button>`).join('')}
+        </div>
+      `;
+    }
+
+    function marketCardHtml(club, tag, dataOffer, isStay) {
+      return `
+        <button type="button" class="cr-market-card ${isStay ? 'cr-market-stay' : ''}" data-offer="${dataOffer}">
+          <span class="cr-market-tag">${tag}</span>
+          <div class="cr-market-crest">${badge(club, 56)}</div>
+          <span class="cr-market-name">${escapeHtml(club.name)}</span>
+          <span class="cr-market-league">${escapeHtml(club.flag)} ${escapeHtml(club.league)}</span>
+        </button>
+      `;
+    }
+
+    function marketPanelHtml(event) {
+      const cards = event.offers.map((o, i) => marketCardHtml(o.club, o.loan ? 'Salir a préstamo' : 'Fichar por', i, false)).join('');
+      const stayCard = marketCardHtml(state.club, 'Quedarte en', 'stay', true);
+      return `
+        <span class="eyebrow">Temporada ${state.period + 1}</span>
+        <h2>Mercado de pases</h2>
+        <p>${escapeHtml(event.desc)}</p>
+        <div class="cr-market-cards">${cards}${stayCard}</div>
+      `;
+    }
+
+    function renderResult(result) {
+      const extras = [result.choiceText, result.injuryText, result.titleText, result.awardText].filter(Boolean);
       const panel = container.querySelector('.cr-event');
       panel.innerHTML = `
         <span class="eyebrow">Resultado</span>
@@ -352,40 +410,86 @@
 
     // ---------- Resumen final ----------
 
+    function clubCardHtml(stint) {
+      const [c1, c2] = stint.club.colors;
+      return `
+        <div class="cr-club-card" style="background:linear-gradient(160deg, ${c1}33, ${c2}55);">
+          <div class="cr-club-card-crest">${badge(stint.club, 54)}</div>
+          <h4>${escapeHtml(stint.club.name)}</h4>
+          <span class="cr-club-card-age">${stint.ageFrom}-${stint.ageTo} años · ${escapeHtml(stint.club.league)}</span>
+          <div class="cr-club-card-stats">
+            <div><b>${stint.matches}</b><span>PJ</span></div>
+            <div><b>${stint.wins}</b><span>VI</span></div>
+            <div><b>${stint.goals}</b><span>GR</span></div>
+          </div>
+          ${stint.titles ? `<div class="cr-club-card-trophies">${'🏆'.repeat(Math.min(stint.titles, 5))}</div>` : ''}
+        </div>
+      `;
+    }
+
     function renderSummary() {
       const title = Engine.careerTitle(state);
       const posLabel = state.positionDetail || Engine.POSITIONS.find((p) => p.id === state.position).label;
+      const nat = state.national;
+      const hasAwards = state.individualAwardNames.length > 0;
       container.innerHTML = `
         ${topbar()}
         <div class="panel cr-summary">
-          <div class="cr-summary-head">
-            <div class="cr-ovr-badge ${ovrClass(state.peakLevel)}">
-              <span class="cr-ovr-label">PEAK</span>
-              <span class="cr-ovr-value">${state.peakLevel}</span>
+          <div class="cr-summary-top">
+            <div class="cr-summary-box cr-summary-main">
+              <span class="eyebrow">Carrera finalizada</span>
+              <h2>${escapeHtml(state.surname)}</h2>
+              <div class="cr-summary-main-row">
+                <span class="cr-summary-pos-num">#${state.number}</span>
+                <span class="cr-club-pill">${escapeHtml(posLabel)}</span>
+              </div>
+              <div class="cr-summary-main-meta">
+                <span>VALOR<b>€${state.peakMarketValue}M</b></span>
+                <div class="cr-ovr-badge ${ovrClass(state.peakLevel)}">
+                  <span class="cr-ovr-label">OVR</span>
+                  <span class="cr-ovr-value">${state.peakLevel}</span>
+                </div>
+              </div>
+              <div class="cr-summary-main-stats">
+                <div><b>${state.matches}</b><span>PJ</span></div>
+                <div><b>${state.wins}</b><span>VI</span></div>
+                <div><b>${state.goals}</b><span>GR</span></div>
+              </div>
             </div>
-            <div>
-              <span class="eyebrow">Fin de la carrera</span>
-              <h2>${escapeHtml(title)}</h2>
-              <p class="sub">${state.country.flag} ${state.surname} #${state.number} · ${posLabel} · ${state.country.name} · Retiro a los ${state.age} años</p>
+
+            <div class="cr-summary-box cr-summary-national">
+              <span class="eyebrow">Selección</span>
+              <div class="cr-national-head">
+                <span class="cr-flag" style="font-size:1.6rem;">${state.country.flag}</span>
+                <h3>${escapeHtml(state.country.name)}</h3>
+              </div>
+              <div class="cr-summary-main-stats">
+                <div><b>${nat.matches}</b><span>PJ</span></div>
+                <div><b>${nat.wins}</b><span>VI</span></div>
+                <div><b>${nat.goals}</b><span>GR</span></div>
+              </div>
+              ${nat.trophies ? `<div class="cr-national-trophy">🏆 Campeón del Mundo</div>` : ''}
+            </div>
+
+            <div class="cr-summary-box cr-summary-awards">
+              <span class="eyebrow">Premios individuales</span>
+              ${hasAwards
+                ? `<div class="cr-awards-list">${state.individualAwardNames.map((a) => `<div class="cr-trophy-row">⭐ <span>${escapeHtml(a)}</span></div>`).join('')}</div>`
+                : '<p class="cr-empty-note">Vitrina vacía</p>'}
             </div>
           </div>
-          <div class="cr-summary-grid">
-            <div class="cr-stat-card"><b>${state.peakLevel}</b><span>Nivel máximo</span></div>
-            <div class="cr-stat-card"><b>€${state.peakMarketValue}M</b><span>Valor máximo</span></div>
-            <div class="cr-stat-card"><b>${state.matches}</b><span>Partidos jugados</span></div>
-            ${state.position !== 'portero' ? `
-              <div class="cr-stat-card"><b>${state.goals}</b><span>Goles</span></div>
-              <div class="cr-stat-card"><b>${state.assists}</b><span>Asistencias</span></div>
-            ` : `<div class="cr-stat-card"><b>${state.cleanSheets}</b><span>Vallas invictas</span></div>`}
-            <div class="cr-stat-card"><b>${state.collectiveTitles}</b><span>Títulos de equipo</span></div>
-            <div class="cr-stat-card"><b>${state.individualAwards}</b><span>Premios individuales</span></div>
-            <div class="cr-stat-card"><b>${state.caps}</b><span>Convocatorias a selección</span></div>
-            <div class="cr-stat-card"><b>${state.injuries}</b><span>Lesiones importantes</span></div>
+
+          <h3 class="cr-clubs-title">Clubes de tu carrera</h3>
+          <div class="cr-club-cards">
+            ${state.clubHistory.map((s) => clubCardHtml(s)).join('')}
           </div>
+
+          <p class="sub cr-summary-footnote">${escapeHtml(title)} · Retiro a los ${state.age} años · ${state.injuries} lesión(es) importante(s)</p>
+
           <div class="setup-actions">
             <button class="btn btn-ghost" id="cr-copy">Copiar resumen para compartir</button>
             <button class="btn btn-ghost" id="cr-exit">Volver al hub</button>
-            <button class="btn btn-primary" id="cr-again">Iniciar otra carrera</button>
+            <button class="btn btn-primary" id="cr-again">Volver a jugar</button>
           </div>
         </div>
       `;
