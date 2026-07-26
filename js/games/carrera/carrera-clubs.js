@@ -257,7 +257,8 @@
   }
 
   // Insignia SVG generada (no es un logo real): forma + iniciales + colores.
-  function badgeSvg(club, size) {
+  // Se usa como respaldo automático cuando todavía no hay escudo real cargado.
+  function proceduralSvg(club, size) {
     const s = size || 40;
     const [c1, c2] = club.colors;
     const gid = `crg-${club.id}-${s}`.replace(/[^a-zA-Z0-9-]/g, '');
@@ -281,8 +282,40 @@
     </svg>`;
   }
 
+  // Carpeta donde vas a ir soltando los escudos reales. El nombre de archivo
+  // esperado para cada club es exactamente `${club.id}.png` (podés usar
+  // .png, .webp o .svg — se prueban en ese orden).
+  const CREST_DIR = 'assets/crests/';
+  const CREST_EXTENSIONS = ['png', 'webp', 'svg'];
+
+  function escapeAttr(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  // Devuelve el marcado del escudo del club: intenta cargar el archivo real
+  // (assets/crests/<id>.png, luego .webp, luego .svg) y, si ninguno existe,
+  // muestra automáticamente la insignia procedural como respaldo.
+  function badgeSvg(club, size) {
+    const s = size || 40;
+    const h = club.shape === 'circle' ? s : Math.round(s * 72 / 64);
+    const fallback = proceduralSvg(club, s);
+    const label = escapeAttr(club.name);
+    const chain = CREST_EXTENSIONS.map((ext) => `${CREST_DIR}${club.id}.${ext}`);
+    // data-crest-chain guarda las rutas restantes a probar; el onerror va
+    // sacando una por una hasta agotar la lista y recién ahí muestra el SVG.
+    const rest = chain.slice(1).join('|');
+    return `<span class="cr-badge" style="display:inline-block;width:${s}px;height:${h}px;position:relative;line-height:0;">
+      <img src="${chain[0]}" data-crest-chain="${rest}" width="${s}" height="${h}" alt="${label}" loading="lazy"
+        style="width:100%;height:100%;object-fit:contain;display:block;border-radius:4px;"
+        onerror="var el=this;var rest=(el.dataset.crestChain||'').split('|').filter(Boolean);if(rest.length){el.src=rest.shift();el.dataset.crestChain=rest.join('|');}else{el.style.display='none';el.nextElementSibling.style.display='block';}" />
+      <span style="display:none;position:absolute;inset:0;">${fallback}</span>
+    </span>`;
+  }
+
   global.GameHub = global.GameHub || {};
   global.GameHub.CarreraClubs = {
-    CLUBS, clubsByCountry, pickStartClub, pickOffers, badgeSvg, academyClubFor,
+    CLUBS, clubsByCountry, pickStartClub, pickOffers, badgeSvg, academyClubFor, CREST_DIR,
   };
 })(window);
