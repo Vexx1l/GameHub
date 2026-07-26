@@ -2,7 +2,7 @@
 // Cachea todos los archivos del hub para que funcione offline
 // y pueda instalarse como app.
 
-const CACHE_NAME = "noche-de-juegos-v2";
+const CACHE_NAME = "noche-de-juegos-v3";
 
 const FILES_TO_CACHE = [
   "./",
@@ -72,6 +72,7 @@ const FILES_TO_CACHE = [
   "./js/games/rummikub/rummikub-bot.js",
   "./js/games/rummikub/rummikub-engine.js",
   "./js/games/rummikub/rummikub-ui.js",
+  "./js/games/carrera/carrera-countries.js",
   "./js/games/carrera/carrera-engine.js",
   "./js/games/carrera/carrera-ui.js",
   "./js/games/ruleta/ruleta-engine.js",

@@ -1,101 +1,322 @@
 (function (global) {
   const Engine = global.GameHub.CarreraEngine;
+  const Countries = global.GameHub.CarreraCountries;
+
+  const DEFAULT_COUNTRY = Countries.COUNTRIES.find((c) => c.name === 'Colombia') || Countries.COUNTRIES[0];
+  const DEFAULT_SPOT_ID = 'mc';
+
+  const TIER_ABBR = ['CB', 'D2', 'D1', 'CONT', 'UE-M', 'UE-G'];
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  function ovrClass(level) {
+    if (level >= 80) return 'cr-ovr-elite';
+    if (level >= 65) return 'cr-ovr-good';
+    if (level >= 50) return 'cr-ovr-mid';
+    return 'cr-ovr-low';
+  }
 
   function mount(container, config) {
     let state = null;
     let destroyed = false;
 
-    function renderSetup() {
-      container.innerHTML = `
+    // Borrador de creación de personaje (persiste mientras se arma la identidad).
+    const draft = {
+      surname: '',
+      number: 10,
+      foot: 'derecha',
+      country: DEFAULT_COUNTRY,
+      spot: Engine.POSITION_SPOTS.find((s) => s.id === DEFAULT_SPOT_ID),
+    };
+
+    function topbar() {
+      return `
         <div class="game-topbar">
           <div class="left">
             <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
             <h2>Camino a la Gloria</h2>
           </div>
         </div>
-        <div class="cr-setup panel">
-          <h3>Crea a tu futbolista</h3>
-          <div class="setup-field">
-            <label for="cr-surname">Apellido</label>
-            <input type="text" id="cr-surname" maxlength="18" placeholder="Ej: Rodríguez">
+      `;
+    }
+
+    function bindBack(root) {
+      root.querySelector('.back-btn').addEventListener('click', () => config.onExit());
+    }
+
+    // ---------- Pantalla de creación de identidad ----------
+
+    function renderSetup() {
+      container.innerHTML = `
+        ${topbar()}
+        <div class="cr-identity-title">
+          <h3>Definí tu identidad</h3>
+          <p class="sub">Elegí cómo se va a llamar, de dónde viene y en qué posición va a brillar tu futbolista.</p>
+        </div>
+        <div class="cr-identity-grid">
+          <div class="panel cr-id-col cr-id-jersey-col">
+            <span class="cr-col-label">Identidad</span>
+            <div class="cr-jersey-wrap">
+              <div class="cr-jersey">
+                <span class="cr-jersey-number" id="cr-jersey-number">10</span>
+                <span class="cr-jersey-name" id="cr-jersey-name">JUGADOR</span>
+              </div>
+            </div>
+            <div class="setup-field">
+              <label for="cr-surname">Apellido</label>
+              <input type="text" id="cr-surname" maxlength="18" placeholder="Ej: Rodríguez">
+            </div>
+            <div class="setup-field">
+              <label for="cr-number">Número</label>
+              <input type="number" id="cr-number" min="1" max="99" value="10">
+            </div>
+            <div class="setup-field">
+              <label>Pierna hábil</label>
+              <div class="cr-toggle-row" id="cr-foot-toggle">
+                <button type="button" class="cr-toggle-btn" data-foot="izquierda">Izquierda</button>
+                <button type="button" class="cr-toggle-btn active" data-foot="derecha">Derecha</button>
+              </div>
+            </div>
           </div>
-          <div class="setup-field">
-            <label for="cr-number">Dorsal</label>
-            <input type="number" id="cr-number" min="1" max="99" value="10">
+
+          <div class="panel cr-id-col cr-id-country-col">
+            <span class="cr-col-label">Nacionalidad</span>
+            <div class="cr-search-wrap">
+              <span class="cr-search-icon">⌕</span>
+              <input type="text" id="cr-country-search" placeholder="Buscar país" autocomplete="off">
+            </div>
+            <div class="cr-country-list" id="cr-country-list"></div>
           </div>
-          <div class="setup-field">
-            <label for="cr-foot">Pierna hábil</label>
-            <select id="cr-foot">
-              <option value="derecha">Derecha</option>
-              <option value="izquierda">Izquierda</option>
-            </select>
-          </div>
-          <div class="setup-field">
-            <label for="cr-country">País</label>
-            <select id="cr-country">
-              ${Engine.COUNTRIES.map((c) => `<option value="${c}">${c}</option>`).join('')}
-            </select>
-          </div>
-          <div class="setup-field">
-            <label for="cr-position">Posición</label>
-            <select id="cr-position">
-              ${Engine.POSITIONS.map((p) => `<option value="${p.id}">${p.label}</option>`).join('')}
-            </select>
-          </div>
-          <div class="setup-actions">
-            <button class="btn btn-primary" id="cr-start">Debutar como profesional</button>
+
+          <div class="panel cr-id-col cr-id-position-col">
+            <span class="cr-col-label">Posición</span>
+            <div class="cr-pitch" id="cr-pitch">
+              <div class="cr-pitch-line cr-pitch-halfway"></div>
+              <div class="cr-pitch-circle"></div>
+              <div class="cr-pitch-box cr-pitch-box-top"></div>
+              <div class="cr-pitch-box cr-pitch-box-bottom"></div>
+              ${Engine.POSITION_SPOTS.map((s) => `
+                <button type="button" class="cr-spot" data-spot="${s.id}" style="left:${s.x}%; top:${s.y}%;" title="${s.label}">
+                  ${s.short}
+                </button>
+              `).join('')}
+            </div>
+            <p class="cr-position-selected" id="cr-position-selected">Elegí una posición en la cancha</p>
           </div>
         </div>
+        <div class="setup-actions cr-setup-actions">
+          <button class="btn btn-primary" id="cr-start">Debutar como profesional</button>
+        </div>
       `;
-      container.querySelector('.back-btn').addEventListener('click', () => config.onExit());
+      bindBack(container);
+
+      // --- Camiseta en vivo ---
+      const surnameInput = container.querySelector('#cr-surname');
+      const numberInput = container.querySelector('#cr-number');
+      const jerseyNumber = container.querySelector('#cr-jersey-number');
+      const jerseyName = container.querySelector('#cr-jersey-name');
+      surnameInput.addEventListener('input', () => {
+        draft.surname = surnameInput.value.trim();
+        jerseyName.textContent = (draft.surname || 'JUGADOR').toUpperCase();
+      });
+      numberInput.addEventListener('input', () => {
+        const n = Number(numberInput.value);
+        draft.number = n || 10;
+        jerseyNumber.textContent = draft.number;
+      });
+
+      // --- Pierna hábil ---
+      const footToggle = container.querySelector('#cr-foot-toggle');
+      footToggle.querySelectorAll('.cr-toggle-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          footToggle.querySelectorAll('.cr-toggle-btn').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          draft.foot = btn.dataset.foot;
+        });
+      });
+
+      // --- Nacionalidad: lista buscable, siempre visible (todas las nacionalidades) ---
+      const listEl = container.querySelector('#cr-country-list');
+      const searchInput = container.querySelector('#cr-country-search');
+
+      function renderCountryList(filter) {
+        const q = (filter || '').toLocaleLowerCase('es');
+        const items = Countries.COUNTRIES.filter((c) => c.name.toLocaleLowerCase('es').includes(q));
+        listEl.innerHTML = items.length
+          ? items.map((c) => `
+              <button type="button" class="cr-country-row ${draft.country && draft.country.code === c.code ? 'active' : ''}" data-code="${c.code}">
+                <span class="cr-flag">${c.flag}</span>
+                <span>${escapeHtml(c.name)}</span>
+              </button>
+            `).join('')
+          : `<p class="cr-empty-note">No encontramos ese país.</p>`;
+        listEl.querySelectorAll('.cr-country-row').forEach((row) => {
+          row.addEventListener('click', () => {
+            draft.country = Countries.COUNTRIES.find((c) => c.code === row.dataset.code);
+            listEl.querySelectorAll('.cr-country-row').forEach((r) => r.classList.remove('active'));
+            row.classList.add('active');
+          });
+        });
+      }
+      searchInput.addEventListener('input', () => renderCountryList(searchInput.value));
+      renderCountryList('');
+      // Deja el país por defecto ya resaltado y visible en la lista.
+      const preselected = listEl.querySelector(`.cr-country-row[data-code="${draft.country.code}"]`);
+      if (preselected) preselected.scrollIntoView({ block: 'center' });
+
+      // --- Posición: cancha interactiva ---
+      const posLabel = container.querySelector('#cr-position-selected');
+      const spots = container.querySelectorAll('.cr-spot');
+      function selectSpot(id) {
+        const spot = Engine.POSITION_SPOTS.find((s) => s.id === id);
+        if (!spot) return;
+        draft.spot = spot;
+        spots.forEach((b) => b.classList.remove('active'));
+        container.querySelector(`.cr-spot[data-spot="${id}"]`).classList.add('active');
+        posLabel.textContent = `Posición elegida: ${spot.label} (${spot.short})`;
+      }
+      spots.forEach((btn) => btn.addEventListener('click', () => selectSpot(btn.dataset.spot)));
+      selectSpot(draft.spot.id);
+
+      // --- Confirmar y arrancar carrera ---
       container.querySelector('#cr-start').addEventListener('click', () => {
-        const surname = container.querySelector('#cr-surname').value.trim() || 'Jugador';
-        const number = Number(container.querySelector('#cr-number').value) || 10;
-        const foot = container.querySelector('#cr-foot').value;
-        const country = container.querySelector('#cr-country').value;
-        const position = container.querySelector('#cr-position').value;
-        state = Engine.createCareer({ surname, number, foot, country, position });
+        state = Engine.createCareer({
+          surname: draft.surname || 'Jugador',
+          number: draft.number || 10,
+          foot: draft.foot,
+          country: draft.country,
+          position: draft.spot.group,
+          positionDetail: draft.spot.id,
+        });
         renderPeriod();
       });
     }
 
+    // ---------- Tarjeta de jugador (reutilizada en la simulación) ----------
+
+    function playerCardHtml() {
+      const contribLabel = state.position === 'portero' ? 'Vallas invictas' : 'Goles + asist.';
+      const contribValue = state.position === 'portero'
+        ? state.cleanSheets
+        : state.goals + state.assists;
+      const trophyCount = state.collectiveTitles + state.individualAwards;
+      return `
+        <div class="cr-player-card">
+          <div class="cr-player-head">
+            <div class="cr-ovr-badge ${ovrClass(state.level)}">
+              <span class="cr-ovr-label">OVR</span>
+              <span class="cr-ovr-value">${state.level}</span>
+            </div>
+            <div class="cr-player-id">
+              <span class="cr-flag-chip">${state.country.flag} ${state.positionShort || ''}</span>
+              <h3>${state.surname} <span class="mono">#${state.number}</span></h3>
+              <p class="sub">${state.positionDetail || Engine.POSITIONS.find((p) => p.id === state.position).label} · ${state.country.name}</p>
+            </div>
+          </div>
+          <div class="cr-player-meta">
+            <div class="cr-meta-item"><span class="cr-meta-k">EDAD</span><span class="cr-meta-v">${state.age}</span></div>
+            <div class="cr-meta-item"><span class="cr-meta-k">CLUB</span><span class="cr-meta-v cr-club-pill">${TIER_ABBR[state.clubTier]}</span></div>
+            <div class="cr-meta-item"><span class="cr-meta-k">VALOR</span><span class="cr-meta-v">€${state.marketValue}M</span></div>
+          </div>
+          <div class="cr-stat-icons">
+            <div class="cr-stat-icon"><span class="cr-stat-glyph cr-glyph-pj">▤</span><b>${state.matches}</b><span>PJ</span></div>
+            <div class="cr-stat-icon"><span class="cr-stat-glyph cr-glyph-gr">⚽</span><b>${contribValue}</b><span>${state.position === 'portero' ? 'VI' : 'GR'}</span></div>
+            <div class="cr-stat-icon"><span class="cr-stat-glyph cr-glyph-vi">🏆</span><b>${trophyCount}</b><span>VIT</span></div>
+          </div>
+          <div class="cr-trophy-case">
+            ${trophyCount === 0 && state.caps === 0
+              ? '<p class="cr-empty-note">Vitrina vacía. ¡Empezá a ganar cosas!</p>'
+              : `
+                ${state.collectiveTitles ? `<div class="cr-trophy-row">🏆 <span>${state.collectiveTitles} título(s) de equipo</span></div>` : ''}
+                ${state.individualAwards ? `<div class="cr-trophy-row">⭐ <span>${state.individualAwards} premio(s) individual(es)</span></div>` : ''}
+                ${state.caps ? `<div class="cr-trophy-row">🎖️ <span>${state.caps} convocatoria(s) a selección</span></div>` : ''}
+              `}
+          </div>
+        </div>
+      `;
+    }
+
+    // ---------- Línea de tiempo de temporadas ----------
+
+    function timelineHtml() {
+      const rows = [];
+      for (let i = 0; i < state.totalPeriods; i += 1) {
+        const ageFrom = 17 + i * 2;
+        if (i < state.log.length) {
+          const entry = state.log[i];
+          const badges = [entry.champion ? '🏆' : '', entry.award ? '⭐' : '', entry.injured ? '🩹' : ''].filter(Boolean).join(' ');
+          rows.push(`
+            <div class="cr-tl-row cr-tl-done">
+              <span class="cr-tl-age">${ageFrom}</span>
+              <span class="cr-tl-club">${TIER_ABBR[entry.clubTier]}</span>
+              <span class="cr-tl-ovr">${entry.level}</span>
+              <span class="cr-tl-badges">${badges}</span>
+            </div>
+          `);
+        } else if (i === state.period) {
+          rows.push(`
+            <div class="cr-tl-row cr-tl-current">
+              <span class="cr-tl-age">${ageFrom}</span>
+              <span class="cr-tl-club">En juego…</span>
+              <span class="cr-tl-ovr">${state.level}</span>
+              <span class="cr-tl-badges"></span>
+            </div>
+          `);
+        } else {
+          rows.push(`
+            <div class="cr-tl-row cr-tl-locked">
+              <span class="cr-tl-age">${ageFrom}</span>
+              <span class="cr-tl-club">?</span>
+              <span class="cr-tl-ovr">—</span>
+              <span class="cr-tl-badges"></span>
+            </div>
+          `);
+        }
+      }
+      return `
+        <div class="cr-timeline panel">
+          <div class="cr-timeline-head">
+            <span>EDAD</span><span>CLUB</span><span>OVR</span><span></span>
+          </div>
+          ${rows.join('')}
+        </div>
+      `;
+    }
+
+    // ---------- Pantalla de simulación (temporada / evento) ----------
+
     function renderPeriod() {
       const event = Engine.pickEvent(state);
       container.innerHTML = `
-        <div class="game-topbar">
-          <div class="left">
-            <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
-            <h2>Camino a la Gloria</h2>
-          </div>
-        </div>
+        ${topbar()}
         <div class="cr-progress">
           <div class="cr-progress-bar">
             <div class="cr-progress-fill" style="width:${(state.period / state.totalPeriods) * 100}%"></div>
           </div>
           <span class="pill">${state.age}-${state.age + 1} años</span>
         </div>
-        <div class="cr-layout">
-          <div class="panel cr-stats">
-            <h3>${state.surname} #${state.number}</h3>
-            <p class="sub">${Engine.POSITIONS.find((p) => p.id === state.position).label} · ${state.country}</p>
-            <div class="cr-stat-row"><span>Nivel</span><span class="mono">${state.level}</span></div>
-            <div class="cr-stat-row"><span>Reputación</span><span class="mono">${state.reputation}</span></div>
-            <div class="cr-stat-row"><span>Moral</span><span class="mono">${state.morale}</span></div>
-            <div class="cr-stat-row"><span>Riesgo de lesión</span><span class="mono">${state.injuryRisk}</span></div>
-            <div class="cr-stat-row"><span>Valor de mercado</span><span class="mono">€${state.marketValue}M</span></div>
-            <div class="cr-stat-row"><span>Club</span><span class="mono">${Engine.CLUB_TIERS[state.clubTier]}</span></div>
+        <div class="cr-dashboard">
+          <div class="cr-dash-col-left">
+            ${playerCardHtml()}
           </div>
-          <div class="panel cr-event">
+          <div class="cr-dash-col-mid panel cr-event">
             <span class="eyebrow">Temporada ${state.period + 1}</span>
-            <h2>${event.title}</h2>
-            <p>${event.desc}</p>
+            <h2>${escapeHtml(event.title)}</h2>
+            <p>${escapeHtml(event.desc)}</p>
             <div class="cr-options" id="cr-options">
-              ${event.options.map((o, i) => `<button class="btn btn-primary cr-option-btn" data-index="${i}">${o.label}</button>`).join('')}
+              ${event.options.map((o, i) => `<button class="btn btn-primary cr-option-btn" data-index="${i}">${escapeHtml(o.label)}</button>`).join('')}
             </div>
+          </div>
+          <div class="cr-dash-col-right">
+            ${timelineHtml()}
           </div>
         </div>
       `;
-      container.querySelector('.back-btn').addEventListener('click', () => config.onExit());
+      bindBack(container);
       container.querySelectorAll('.cr-option-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           const option = event.options[Number(btn.dataset.index)];
@@ -110,33 +331,44 @@
       const panel = container.querySelector('.cr-event');
       panel.innerHTML = `
         <span class="eyebrow">Resultado</span>
-        <h2>${extras[0]}</h2>
+        <h2>${escapeHtml(extras[0])}</h2>
         <div class="cr-extra-notes">
-          ${extras.slice(1).map((t) => `<p>${t}</p>`).join('')}
+          ${extras.slice(1).map((t) => `<p>${escapeHtml(t)}</p>`).join('')}
         </div>
         <div class="cr-options">
           <button class="btn btn-primary" id="cr-continue">${state.retired ? 'Ver resumen de carrera' : 'Continuar carrera'}</button>
         </div>
       `;
+      // La tarjeta y la línea de tiempo ya reflejan los nuevos valores tras el cambio de estado.
+      const left = container.querySelector('.cr-dash-col-left');
+      const right = container.querySelector('.cr-dash-col-right');
+      if (left) left.innerHTML = playerCardHtml();
+      if (right) right.innerHTML = timelineHtml();
+
       container.querySelector('#cr-continue').addEventListener('click', () => {
         if (state.retired) renderSummary(); else renderPeriod();
       });
     }
 
+    // ---------- Resumen final ----------
+
     function renderSummary() {
       const title = Engine.careerTitle(state);
-      const posLabel = Engine.POSITIONS.find((p) => p.id === state.position).label;
+      const posLabel = state.positionDetail || Engine.POSITIONS.find((p) => p.id === state.position).label;
       container.innerHTML = `
-        <div class="game-topbar">
-          <div class="left">
-            <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
-            <h2>Camino a la Gloria</h2>
-          </div>
-        </div>
+        ${topbar()}
         <div class="panel cr-summary">
-          <span class="eyebrow">Fin de la carrera</span>
-          <h2>${title}</h2>
-          <p class="sub">${state.surname} #${state.number} · ${posLabel} · ${state.country} · Retiro a los ${state.age} años</p>
+          <div class="cr-summary-head">
+            <div class="cr-ovr-badge ${ovrClass(state.peakLevel)}">
+              <span class="cr-ovr-label">PEAK</span>
+              <span class="cr-ovr-value">${state.peakLevel}</span>
+            </div>
+            <div>
+              <span class="eyebrow">Fin de la carrera</span>
+              <h2>${escapeHtml(title)}</h2>
+              <p class="sub">${state.country.flag} ${state.surname} #${state.number} · ${posLabel} · ${state.country.name} · Retiro a los ${state.age} años</p>
+            </div>
+          </div>
           <div class="cr-summary-grid">
             <div class="cr-stat-card"><b>${state.peakLevel}</b><span>Nivel máximo</span></div>
             <div class="cr-stat-card"><b>€${state.peakMarketValue}M</b><span>Valor máximo</span></div>
@@ -157,7 +389,7 @@
           </div>
         </div>
       `;
-      container.querySelector('.back-btn').addEventListener('click', () => config.onExit());
+      bindBack(container);
       container.querySelector('#cr-exit').addEventListener('click', () => config.onExit());
       container.querySelector('#cr-again').addEventListener('click', () => renderSetup());
       container.querySelector('#cr-copy').addEventListener('click', (e) => {

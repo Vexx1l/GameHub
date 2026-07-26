@@ -6,17 +6,32 @@
  * con eventos y textos propios.
  */
 (function (global) {
-  const COUNTRIES = [
-    'Colombia', 'Argentina', 'Brasil', 'Uruguay', 'México', 'España',
-    'Francia', 'Inglaterra', 'Portugal', 'Italia', 'Países Bajos',
-    'Alemania', 'Chile', 'Perú', 'Ecuador', 'Estados Unidos', 'Croacia',
-  ];
+  // Listado completo de países (nombre + bandera), definido en carrera-countries.js
+  const COUNTRIES = global.GameHub.CarreraCountries.COUNTRIES;
 
   const POSITIONS = [
     { id: 'portero', label: 'Portero' },
     { id: 'defensa', label: 'Defensa' },
     { id: 'mediocampista', label: 'Mediocampista' },
     { id: 'delantero', label: 'Delantero' },
+  ];
+
+  // Posiciones detalladas sobre la cancha, para el selector visual.
+  // "group" mapea a la categoría amplia (POSITIONS) que usa el motor de simulación.
+  // x/y son porcentajes sobre un campo vertical (0,0 = arco propio arriba a la izquierda del área).
+  const POSITION_SPOTS = [
+    { id: 'por', label: 'Portero', short: 'POR', group: 'portero', x: 50, y: 90 },
+    { id: 'dfc', label: 'Defensa central', short: 'DFC', group: 'defensa', x: 50, y: 72 },
+    { id: 'li', label: 'Lateral izquierdo', short: 'LI', group: 'defensa', x: 16, y: 68 },
+    { id: 'ld', label: 'Lateral derecho', short: 'LD', group: 'defensa', x: 84, y: 68 },
+    { id: 'mcd', label: 'Mediocentro defensivo', short: 'MCD', group: 'mediocampista', x: 50, y: 54 },
+    { id: 'mi', label: 'Mediocampista izquierdo', short: 'MI', group: 'mediocampista', x: 20, y: 42 },
+    { id: 'mc', label: 'Mediocampista central', short: 'MC', group: 'mediocampista', x: 50, y: 42 },
+    { id: 'md', label: 'Mediocampista derecho', short: 'MD', group: 'mediocampista', x: 80, y: 42 },
+    { id: 'mco', label: 'Mediapunta', short: 'MCO', group: 'mediocampista', x: 50, y: 28 },
+    { id: 'ei', label: 'Extremo izquierdo', short: 'EI', group: 'delantero', x: 18, y: 16 },
+    { id: 'ed', label: 'Extremo derecho', short: 'ED', group: 'delantero', x: 82, y: 16 },
+    { id: 'dc', label: 'Delantero centro', short: 'DC', group: 'delantero', x: 50, y: 10 },
   ];
 
   const CLUB_TIERS = [
@@ -167,9 +182,12 @@
     return EVENTS.concat(POSITION_EVENTS[position] || []);
   }
 
-  function createCareer({ surname, number, foot, country, position }) {
+  function createCareer({ surname, number, foot, country, position, positionDetail }) {
+    const spot = POSITION_SPOTS.find((s) => s.id === positionDetail) || null;
     return {
       surname, number, foot, country, position,
+      positionDetail: spot ? spot.label : null,
+      positionShort: spot ? spot.short : null,
       age: 17,
       period: 0,
       totalPeriods: 9, // 17-18 ... 33-34, retiro a los 35
@@ -257,6 +275,16 @@
     state.peakLevel = Math.max(state.peakLevel, state.level);
     state.peakMarketValue = Math.max(state.peakMarketValue, state.marketValue);
 
+    state.log.push({
+      ageFrom: state.age,
+      ageTo: state.age + 2,
+      clubTier: state.clubTier,
+      level: state.level,
+      champion: Boolean(titleText),
+      award: Boolean(awardText),
+      injured: Boolean(injuryText),
+    });
+
     state.age += 2;
     state.period += 1;
     if (state.age > 33 || state.level <= 5) state.retired = true;
@@ -276,7 +304,7 @@
     const posLabel = POSITIONS.find((p) => p.id === state.position).label;
     return [
       `⚽ ${careerTitle(state)} ⚽`,
-      `${state.surname} #${state.number} — ${posLabel} (${state.country})`,
+      `${state.surname} #${state.number} — ${posLabel} (${state.country.flag} ${state.country.name})`,
       `Nivel máximo: ${state.peakLevel} · Valor máximo: €${state.peakMarketValue}M`,
       `${state.matches} partidos${state.position !== 'portero' ? ` · ${state.goals} goles · ${state.assists} asistencias` : ` · ${state.cleanSheets} vallas invictas`}`,
       `${state.collectiveTitles} títulos de equipo · ${state.individualAwards} premios individuales · ${state.caps} veces convocado a la selección`,
@@ -286,7 +314,7 @@
 
   global.GameHub = global.GameHub || {};
   global.GameHub.CarreraEngine = {
-    COUNTRIES, POSITIONS, CLUB_TIERS,
+    COUNTRIES, POSITIONS, CLUB_TIERS, POSITION_SPOTS,
     createCareer, pickEvent, applyChoice, careerTitle, shareText,
   };
 })(window);
