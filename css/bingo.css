@@ -1,0 +1,48 @@
+/* =========================================================
+   Bingo
+   ========================================================= */
+.bingo-layout { max-width: 1080px; margin: 0 auto var(--space-4); display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-4); align-items: start; }
+@media (max-width: 860px) { .bingo-layout { grid-template-columns: 1fr; } }
+
+.bingo-main, .bingo-side { padding: var(--space-4); }
+.bingo-caller { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+.bingo-last {
+  min-width: 96px; height: 96px; border-radius: 50%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; background: linear-gradient(180deg, var(--gold-500), var(--gold-600));
+  color: #2b1c0d; box-shadow: var(--shadow-soft); flex-shrink: 0;
+}
+.bingo-last .bg-letter { font-family: var(--font-display); font-size: 0.85rem; font-weight: 800; }
+.bingo-last .bg-number { font-family: var(--font-mono); font-size: 1.7rem; font-weight: 700; line-height: 1; }
+.bingo-last .bg-empty { font-size: 0.72rem; padding: 0 8px; text-align: center; color: var(--ink-500); }
+
+.bingo-drawn { display: flex; flex-wrap: wrap; gap: 6px; max-width: 480px; }
+.bg-chip {
+  font-family: var(--font-mono); font-size: 0.7rem; padding: 4px 8px; border-radius: 999px;
+  background: rgba(246,239,221,0.08); color: var(--ink-300);
+}
+
+.bingo-actions { margin-top: var(--space-4); display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.bingo-actions .empty-hint { color: var(--ink-500); font-size: 0.88rem; }
+
+.bingo-side h3 { font-size: 1rem; margin-bottom: 10px; }
+.bingo-side .log { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-300); max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-top: var(--space-3); border-top: 1px solid rgba(246,239,221,0.08); padding-top: 8px; }
+
+.bingo-cards {
+  max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3);
+}
+.bingo-card { padding: var(--space-3); }
+.bingo-card.bg-card-won { box-shadow: 0 0 0 2px var(--gold-500), var(--shadow-deep); }
+.bingo-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.bingo-card-head .seat-name { flex: 1; font-weight: 600; font-size: 0.88rem; }
+.bg-line-pill { color: var(--gold-500); }
+
+.bingo-headers { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 4px; }
+.bingo-headers span { text-align: center; font-family: var(--font-display); font-weight: 700; color: var(--gold-500); font-size: 0.82rem; }
+
+.bingo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.bg-cell {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.2); border-radius: 6px; font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-300);
+}
+.bg-cell.is-free { color: var(--gold-500); font-size: 0.9rem; background: rgba(217,164,65,0.12); }
+.bg-cell.is-marked { background: linear-gradient(180deg, var(--ember-500), var(--ember-600)); color: var(--ink-100); font-weight: 700; }

@@ -1,0 +1,46 @@
+.generala-layout {
+  max-width: 1080px; margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-3);
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .generala-layout { grid-template-columns: 1fr; }
+}
+
+.generala-main { padding: var(--space-4); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+.generala-side { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
+
+.generala-dice { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.die {
+  width: 58px; height: 58px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(155deg, var(--ink-100), #e4d8bd);
+  color: #1c1c1c;
+  border: none;
+  font-family: var(--font-mono); font-weight: 800; font-size: 1.5rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.die:hover:not(:disabled) { transform: translateY(-3px); }
+.die:disabled { cursor: default; }
+.die.is-held { box-shadow: 0 0 0 3px var(--gold-500), 0 4px 10px rgba(0,0,0,0.35); background: linear-gradient(155deg, #fff3d6, #f0dca6); }
+
+.generala-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+.generala-categories { width: 100%; max-width: 560px; }
+.category-choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+@media (max-width: 480px) { .category-choice-grid { grid-template-columns: 1fr; } }
+.category-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+.generala-table-wrap { overflow-x: auto; }
+#ge-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+#ge-table th, #ge-table td { padding: 5px 8px; text-align: center; }
+#ge-table th:first-child, #ge-table td:first-child { text-align: left; color: var(--ink-300); font-weight: 500; }
+#ge-table tr:nth-child(even) { background: rgba(0,0,0,0.12); }
+#ge-table .totals-row { font-weight: 700; color: var(--gold-500); border-top: 1px solid rgba(246,239,221,0.16); }
+#ge-table .swatch { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+.log { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-300); max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }

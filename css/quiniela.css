@@ -1,0 +1,45 @@
+/* =========================================================
+   Quiniela de Fútbol
+   ========================================================= */
+.quiniela-layout { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-4); align-items: start; }
+@media (max-width: 860px) { .quiniela-layout { grid-template-columns: 1fr; } }
+
+.quiniela-main, .quiniela-side { padding: var(--space-4); }
+.turn-indicator { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 6px; }
+.turn-indicator .swatch { width: 16px; height: 16px; border-radius: 50%; }
+.quiniela-main > .sub { color: var(--ink-300); font-size: 0.84rem; margin-bottom: var(--space-3); }
+
+.quiniela-matches { display: flex; flex-direction: column; gap: 10px; }
+.qn-match {
+  display: grid; grid-template-columns: 1fr auto 1fr auto; align-items: center; gap: 10px;
+  background: rgba(0,0,0,0.18); border-radius: var(--radius-md); padding: 10px 14px;
+}
+.qn-team { font-weight: 600; font-size: 0.9rem; }
+.qn-team.qn-home { text-align: right; }
+.qn-team.qn-away { text-align: left; }
+.qn-score-box { display: flex; align-items: center; gap: 8px; }
+.qn-stepper { display: flex; align-items: center; gap: 4px; }
+.qn-stepper button {
+  width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(246,239,221,0.1);
+  color: var(--ink-100); cursor: pointer; font-size: 0.95rem; line-height: 1;
+}
+.qn-stepper button:hover:not(:disabled) { background: rgba(246,239,221,0.2); }
+.qn-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+.qn-goal { font-size: 1.1rem; min-width: 16px; text-align: center; display: inline-block; }
+.qn-dash { color: var(--ink-500); }
+.qn-result-pill { justify-self: end; }
+
+.quiniela-actions { margin-top: var(--space-3); display: flex; justify-content: flex-end; }
+.quiniela-matches .empty-hint { color: var(--ink-500); font-size: 0.88rem; margin-top: 6px; }
+
+.quiniela-side h3 { font-size: 1rem; margin-bottom: 10px; }
+.quiniela-side .log { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-300); max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-top: var(--space-3); border-top: 1px solid rgba(246,239,221,0.08); padding-top: 8px; }
+
+/* ---- Resumen de jornada (overlay) ---- */
+.qn-results-list { display: flex; flex-direction: column; gap: 4px; margin: var(--space-3) 0; font-size: 0.86rem; }
+.qn-result-row { background: rgba(0,0,0,0.15); border-radius: var(--radius-sm); padding: 6px 10px; }
+.qn-seat-detail { margin-bottom: 10px; }
+.qn-picks { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0 34px; }
+.qn-picks .pill { font-size: 0.72rem; }
+.qn-picks .qn-hit-exact { background: rgba(217,164,65,0.28); color: var(--gold-500); }
+.qn-picks .qn-hit-result { background: rgba(62,145,66,0.28); color: #7fd987; }

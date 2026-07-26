@@ -1,0 +1,37 @@
+/* =========================================================
+   Tanda de Penales
+   ========================================================= */
+.penales-layout { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-4); }
+
+.penales-scoreboard { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); gap: var(--space-3); flex-wrap: wrap; }
+.pn-team { display: flex; align-items: center; gap: 8px; }
+.pn-team-away { flex-direction: row-reverse; }
+.pn-team .seat-name { font-weight: 600; font-size: 0.88rem; }
+.pn-dots { display: flex; gap: 4px; }
+.pn-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+.pn-dot.is-goal { background: var(--gold-500); }
+.pn-dot.is-miss { background: rgba(246,239,221,0.15); border: 1px solid rgba(246,239,221,0.3); }
+.pn-dot-empty { color: var(--ink-500); font-size: 0.78rem; }
+.pn-stage { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-300); text-align: center; }
+
+.penales-main { padding: var(--space-4); text-align: center; }
+.pn-phase { font-weight: 600; margin-bottom: var(--space-3); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.pn-phase .swatch { width: 16px; height: 16px; border-radius: 50%; }
+.pn-result { min-height: 1.4em; color: var(--gold-500); font-family: var(--font-display); font-size: 1.05rem; margin-top: var(--space-3); }
+
+.pn-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 8px;
+  max-width: 360px; margin: 0 auto; aspect-ratio: 3 / 2;
+  background: linear-gradient(180deg, rgba(246,239,221,0.05), rgba(246,239,221,0.02));
+  border: 3px solid rgba(246,239,221,0.35); border-radius: var(--radius-md); padding: 10px;
+}
+.pn-zone {
+  border: 1px dashed rgba(246,239,221,0.3); border-radius: var(--radius-sm); background: rgba(0,0,0,0.15);
+  cursor: pointer; transition: filter 0.15s ease, transform 0.1s ease;
+}
+.pn-zone:hover:not(:disabled) { filter: brightness(1.4); transform: scale(1.03); }
+.pn-zone:disabled { cursor: not-allowed; opacity: 0.5; }
+
+.penales-side { padding: var(--space-4); }
+.penales-side h3 { font-size: 1rem; margin-bottom: 10px; }
+.penales-side .log { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-300); max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-top: var(--space-3); border-top: 1px solid rgba(246,239,221,0.08); padding-top: 8px; }

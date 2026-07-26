@@ -1,0 +1,58 @@
+/* =========================================================
+   NOCHE DE JUEGOS — Design Tokens
+   Paleta inspirada en una mesa de juego real: fieltro verde
+   oscuro, madera cálida y fichas de colores clásicas.
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+:root {
+  /* --- Superficies --- */
+  --felt-900: #0d1f16;      /* fieltro más oscuro, fondo general */
+  --felt-800: #12291d;      /* fieltro panel */
+  --felt-700: #1a3728;      /* fieltro tarjeta */
+  --felt-600: #234433;      /* fieltro hover / borde sutil */
+  --wood-900: #2b1c12;      /* madera oscura */
+  --wood-700: #4a3220;      /* madera media (marcos) */
+  --wood-500: #6b4726;      /* madera clara (acentos de marco) */
+
+  /* --- Texto --- */
+  --ink-100: #f6efdd;       /* texto principal, marfil cálido */
+  --ink-300: #d8c9a3;       /* texto secundario */
+  --ink-500: #9c8f74;       /* texto terciario / placeholders */
+
+  /* --- Acentos --- */
+  --gold-500: #d9a441;      /* dorado — dados, resaltes, CTA */
+  --gold-600: #b8842c;
+  --ember-500: #c1443c;     /* rojo teja — peligro, captura, pips */
+  --ember-600: #9c342d;
+
+  /* --- Fichas / jugadores (compartido entre juegos) --- */
+  --player-red: #d64545;
+  --player-green: #3e9142;
+  --player-yellow: #e0b93d;
+  --player-blue: #3e6fb0;
+  --player-purple: #8a5bc2;
+  --player-teal: #2f9e8f;
+  --player-orange: #d9772e;
+  --player-pink: #c5588f;
+
+  /* --- Tipografía --- */
+  --font-display: 'Baloo 2', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* --- Radios / sombras --- */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --shadow-soft: 0 8px 24px rgba(0,0,0,0.35);
+  --shadow-deep: 0 18px 48px rgba(0,0,0,0.5);
+
+  /* --- Espaciado --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 40px;
+}

@@ -1,0 +1,73 @@
+.ahorcado-layout {
+  max-width: 900px; margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: var(--space-3);
+  align-items: start;
+}
+@media (max-width: 800px) {
+  .ahorcado-layout { grid-template-columns: 1fr; }
+}
+
+.ahorcado-main { padding: var(--space-4); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+.ahorcado-side { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
+
+.ahorcado-category { display: flex; gap: 8px; }
+
+.ahorcado-figure { width: 160px; height: 200px; }
+.ahorcado-figure svg { width: 100%; height: 100%; }
+.ahorcado-figure .gallows { stroke: var(--wood-500); stroke-width: 4; stroke-linecap: round; }
+.ahorcado-figure .figure-part {
+  stroke: var(--ink-100); stroke-width: 4; stroke-linecap: round; fill: none;
+  transition: opacity 0.25s ease;
+}
+.ahorcado-figure circle.figure-part { fill: none; }
+
+.ahorcado-word { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.letter-box {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 42px;
+  border-bottom: 3px solid var(--gold-500);
+  font-family: var(--font-mono); font-weight: 700; font-size: 1.3rem;
+  color: var(--ink-100);
+}
+.letter-box.revealed { color: var(--gold-500); }
+
+.ahorcado-keyboard {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 6px;
+  max-width: 460px;
+}
+@media (max-width: 520px) {
+  .ahorcado-keyboard { grid-template-columns: repeat(7, 1fr); }
+}
+.key {
+  padding: 8px 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(246,239,221,0.16);
+  background: rgba(246,239,221,0.06);
+  color: var(--ink-100);
+  font-family: var(--font-mono); font-weight: 700; font-size: 0.85rem;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+.key:not(:disabled):hover { transform: translateY(-2px); background: rgba(246,239,221,0.12); }
+.key:disabled { cursor: not-allowed; opacity: 0.5; }
+.key.is-hit { background: rgba(62,145,66,0.35); border-color: rgba(62,145,66,0.6); opacity: 1; }
+.key.is-miss { background: rgba(193,68,60,0.3); border-color: rgba(193,68,60,0.55); opacity: 1; }
+
+.guess-word-form { display: flex; gap: 8px; margin-top: var(--space-2); }
+.guess-word-form input {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(246,239,221,0.16);
+  background: rgba(0,0,0,0.2);
+  color: var(--ink-100);
+  font-family: var(--font-body);
+  min-width: 220px;
+}
+.guess-word-form input::placeholder { color: var(--ink-500); }
+.guess-word-form input:disabled, .guess-word-form button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.log { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-300); max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }

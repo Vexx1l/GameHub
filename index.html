@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noche de Juegos — Parqués y Dominó</title>
+
+<!-- PWA: permite instalar el hub como app en el celular -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1f16">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Noche de Juegos">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/hub.css">
+<link rel="stylesheet" href="css/parques.css">
+<link rel="stylesheet" href="css/domino.css">
+<link rel="stylesheet" href="css/naipes.css">
+<link rel="stylesheet" href="css/uno.css">
+<link rel="stylesheet" href="css/ahorcado.css">
+<link rel="stylesheet" href="css/generala.css">
+<link rel="stylesheet" href="css/trivia.css">
+<link rel="stylesheet" href="css/casino.css">
+<link rel="stylesheet" href="css/sietezero.css">
+<link rel="stylesheet" href="css/quiniela.css">
+<link rel="stylesheet" href="css/bingo.css">
+<link rel="stylesheet" href="css/penales.css">
+<link rel="stylesheet" href="css/blackjack.css">
+</head>
+<body>
+
+<!-- ============ HUB: estantería de juegos ============ -->
+<section id="screen-hub" class="screen active">
+  <header class="hub-header">
+    <div class="hub-title">
+      <div class="dice-mark" aria-hidden="true">
+        <div class="cube">
+          <div class="face f1"><span></span><span></span><span></span><span></span><span class="pip"></span><span></span><span></span><span></span><span></span></div>
+          <div class="face f2"><span class="pip"></span><span></span><span class="pip"></span><span></span><span></span><span></span><span class="pip"></span><span></span><span class="pip"></span></div>
+          <div class="face f3"><span class="pip"></span><span></span><span></span><span></span><span class="pip"></span><span></span><span></span><span></span><span class="pip"></span></div>
+          <div class="face f4"><span class="pip"></span><span></span><span class="pip"></span><span></span><span></span><span></span><span class="pip"></span><span></span><span class="pip"></span></div>
+          <div class="face f5"><span class="pip"></span><span></span><span class="pip"></span><span></span><span class="pip"></span><span></span><span class="pip"></span><span></span><span class="pip"></span></div>
+          <div class="face f6"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span></span><span></span><span></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+        </div>
+      </div>
+      <div>
+        <span class="eyebrow">Sala de juegos de mesa</span>
+        <h1>Noche de Juegos</h1>
+      </div>
+    </div>
+    <div class="hub-stats" id="hub-stats"></div>
+  </header>
+
+  <div class="shelf" id="shelf"></div>
+</section>
+
+<!-- ============ Pantalla de un juego en curso ============ -->
+<section id="screen-game" class="screen">
+  <div class="screen-inner" id="game-container"></div>
+</section>
+
+<!-- ============ Overlay de configuración de partida ============ -->
+<div class="setup-overlay" id="setup-overlay" hidden>
+  <div class="panel setup-card" id="setup-card"></div>
+</div>
+
+<!-- Núcleo -->
+<script src="js/core/event-bus.js"></script>
+<script src="js/core/storage.js"></script>
+<script src="js/core/dice.js"></script>
+<script src="js/core/autoplay.js"></script>
+<script src="js/core/game-registry.js"></script>
+
+<!-- Parqués -->
+<script src="js/games/parques/board-data.js"></script>
+<script src="js/games/parques/parques-engine.js"></script>
+<script src="js/games/parques/parques-bot.js"></script>
+<script src="js/games/parques/parques-ui.js"></script>
+
+<!-- Dominó -->
+<script src="js/games/domino/domino-engine.js"></script>
+<script src="js/games/domino/domino-bot.js"></script>
+<script src="js/games/domino/domino-ui.js"></script>
+
+<!-- Escalera y Trío (naipes) -->
+<script src="js/games/naipes/naipes-engine.js"></script>
+<script src="js/games/naipes/naipes-bot.js"></script>
+<script src="js/games/naipes/naipes-ui.js"></script>
+
+<!-- UNO -->
+<script src="js/games/uno/uno-engine.js"></script>
+<script src="js/games/uno/uno-bot.js"></script>
+<script src="js/games/uno/uno-ui.js"></script>
+
+<!-- Ahorcado -->
+<script src="js/games/ahorcado/ahorcado-engine.js"></script>
+<script src="js/games/ahorcado/ahorcado-bot.js"></script>
+<script src="js/games/ahorcado/ahorcado-ui.js"></script>
+
+<!-- Generala -->
+<script src="js/games/generala/generala-engine.js"></script>
+<script src="js/games/generala/generala-bot.js"></script>
+<script src="js/games/generala/generala-ui.js"></script>
+
+<!-- Trivia -->
+<script src="js/games/trivia/trivia-engine.js"></script>
+<script src="js/games/trivia/trivia-bot.js"></script>
+<script src="js/games/trivia/trivia-ui.js"></script>
+
+<!-- Ruleta -->
+<script src="js/games/ruleta/ruleta-engine.js"></script>
+<script src="js/games/ruleta/ruleta-ui.js"></script>
+
+<!-- Tragamonedas -->
+<script src="js/games/tragamonedas/tragamonedas-engine.js"></script>
+<script src="js/games/tragamonedas/tragamonedas-ui.js"></script>
+
+<!-- Selección de Ensueño -->
+<script src="js/games/sietezero/sietezero-data.js"></script>
+<script src="js/games/sietezero/sietezero-engine.js"></script>
+<script src="js/games/sietezero/sietezero-missions.js"></script>
+<script src="js/games/sietezero/sietezero-ui.js"></script>
+
+<!-- Quiniela de Fútbol -->
+<script src="js/games/quiniela/quiniela-engine.js"></script>
+<script src="js/games/quiniela/quiniela-bot.js"></script>
+<script src="js/games/quiniela/quiniela-ui.js"></script>
+
+<!-- Bingo -->
+<script src="js/games/bingo/bingo-engine.js"></script>
+<script src="js/games/bingo/bingo-ui.js"></script>
+
+<!-- Tanda de Penales -->
+<script src="js/games/penales/penales-engine.js"></script>
+<script src="js/games/penales/penales-bot.js"></script>
+<script src="js/games/penales/penales-ui.js"></script>
+
+<!-- Blackjack (21) -->
+<script src="js/games/blackjack/blackjack-engine.js"></script>
+<script src="js/games/blackjack/blackjack-bot.js"></script>
+<script src="js/games/blackjack/blackjack-ui.js"></script>
+
+<!-- Hub -->
+<script src="js/app.js"></script>
+
+<!-- Registro del Service Worker (offline + instalación como app) -->
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch((err) => {
+        console.warn("No se pudo registrar el service worker:", err);
+      });
+    });
+  }
+</script>
+</body>
+</html>
