@@ -2,7 +2,7 @@
 // Cachea todos los archivos del hub para que funcione offline
 // y pueda instalarse como app.
 
-const CACHE_NAME = "noche-de-juegos-v1";
+const CACHE_NAME = "noche-de-juegos-v2";
 
 const FILES_TO_CACHE = [
   "./",
@@ -20,6 +20,8 @@ const FILES_TO_CACHE = [
   "./css/parques.css",
   "./css/penales.css",
   "./css/quiniela.css",
+  "./css/rummikub.css",
+  "./css/carrera.css",
   "./css/sietezero.css",
   "./css/tokens.css",
   "./css/trivia.css",
@@ -67,6 +69,11 @@ const FILES_TO_CACHE = [
   "./js/games/quiniela/quiniela-bot.js",
   "./js/games/quiniela/quiniela-engine.js",
   "./js/games/quiniela/quiniela-ui.js",
+  "./js/games/rummikub/rummikub-bot.js",
+  "./js/games/rummikub/rummikub-engine.js",
+  "./js/games/rummikub/rummikub-ui.js",
+  "./js/games/carrera/carrera-engine.js",
+  "./js/games/carrera/carrera-ui.js",
   "./js/games/ruleta/ruleta-engine.js",
   "./js/games/ruleta/ruleta-ui.js",
   "./js/games/sietezero/sietezero-data.js",

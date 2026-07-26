@@ -1,0 +1,144 @@
+.rk-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .rk-layout { grid-template-columns: 1fr; }
+}
+
+.rk-board-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 260px;
+}
+
+.rk-board-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display);
+  color: var(--ink-100);
+}
+
+.rk-board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+  max-height: 340px;
+  padding: var(--space-2);
+  background: var(--felt-900);
+  border-radius: var(--radius-md);
+}
+
+.rk-set {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  padding: var(--space-2);
+  background: var(--felt-800);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--felt-600);
+}
+
+.rk-set.is-targetable {
+  cursor: pointer;
+  border-color: var(--gold-500);
+}
+.rk-set.is-targetable:hover {
+  background: var(--felt-700);
+}
+
+.rk-tile {
+  width: 34px;
+  height: 46px;
+  background: var(--ink-100);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.25);
+  flex-shrink: 0;
+}
+.rk-tile.is-rojo { color: var(--ember-500); }
+.rk-tile.is-azul { color: var(--player-blue); }
+.rk-tile.is-negro { color: var(--wood-900); }
+.rk-tile.is-amarillo { color: var(--gold-600); }
+.rk-tile.is-comodin { background: var(--gold-500); color: var(--felt-900); }
+.rk-tile .rk-star { font-size: 1.2rem; }
+
+.rk-tile-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.rk-tile-btn:disabled { cursor: default; }
+.rk-tile-btn .rk-tile.is-selected {
+  outline: 3px solid var(--gold-500);
+  transform: translateY(-6px);
+}
+
+.rk-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.rk-hand-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rk-hand-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display);
+  color: var(--ink-100);
+}
+
+.rk-hand {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: var(--space-2);
+  background: var(--felt-900);
+  border-radius: var(--radius-md);
+  min-height: 60px;
+}
+
+.rk-hand-tiles {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.rk-spectator-hand {
+  margin-bottom: var(--space-2);
+}
+
+.rk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.rk-actions .empty-hint {
+  width: 100%;
+}
+
+.pill.is-good {
+  background: var(--player-green);
+  color: var(--ink-100);
+}
