@@ -2,7 +2,7 @@
 // Cachea todos los archivos del hub para que funcione offline
 // y pueda instalarse como app.
 
-const CACHE_NAME = "noche-de-juegos-v5";
+const CACHE_NAME = "noche-de-juegos-v6";
 
 const FILES_TO_CACHE = [
   "./",
