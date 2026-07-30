@@ -35,6 +35,42 @@
       Storage.set('stats', stats);
       return stats;
     },
+
+    // ---------- Favoritos ----------
+    getFavorites() {
+      return Storage.get('favorites', []);
+    },
+    isFavorite(gameId) {
+      return Storage.getFavorites().includes(gameId);
+    },
+    toggleFavorite(gameId) {
+      const favs = Storage.getFavorites();
+      const idx = favs.indexOf(gameId);
+      if (idx === -1) favs.push(gameId); else favs.splice(idx, 1);
+      Storage.set('favorites', favs);
+      return favs.includes(gameId);
+    },
+
+    // ---------- Jugados recientemente ----------
+    getRecent() {
+      return Storage.get('recent', []);
+    },
+    addRecent(gameId) {
+      const MAX = 8;
+      let recent = Storage.getRecent().filter((id) => id !== gameId);
+      recent.unshift(gameId);
+      recent = recent.slice(0, MAX);
+      Storage.set('recent', recent);
+      return recent;
+    },
+
+    // ---------- Tema (oscuro/claro) ----------
+    getTheme() {
+      return Storage.get('theme', 'dark');
+    },
+    setTheme(theme) {
+      Storage.set('theme', theme);
+    },
   };
 
   global.GameHub = global.GameHub || {};

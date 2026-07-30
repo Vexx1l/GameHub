@@ -56,3 +56,31 @@
   --space-4: 24px;
   --space-5: 40px;
 }
+
+/* =========================================================
+   Tema claro — se activa con [data-theme="light"] en <html>.
+   Como todos los juegos ya se apoyan en estas variables (nunca
+   en colores fijos de fondo), alcanza con redefinirlas acá para
+   que todo el hub y cada mesa de juego cambien de tema.
+   ========================================================= */
+[data-theme='light'] {
+  /* --- Superficies --- */
+  --felt-900: #f1ebdc;
+  --felt-800: #ffffff;
+  --felt-700: #faf6ec;
+  --felt-600: #e7ddc3;
+  --wood-900: #d8c49c;
+  --wood-700: #ecdfbd;
+  --wood-500: #c9a768;
+
+  /* --- Texto --- */
+  --ink-100: #2a2013;
+  --ink-300: #5c4c34;
+  --ink-500: #8a7a5c;
+
+  /* --- Acentos --- */
+  --gold-500: #b8842c;
+  --gold-600: #96691c;
+  --ember-500: #c1443c;
+  --ember-600: #9c342d;
+}

@@ -32,6 +32,17 @@
 <link rel="stylesheet" href="css/penales.css">
 <link rel="stylesheet" href="css/blackjack.css">
 <link rel="stylesheet" href="css/rummikub.css">
+
+<script>
+  // Se ejecuta antes de pintar la página para evitar el "flash" del tema incorrecto.
+  (function () {
+    try {
+      var raw = localStorage.getItem('noche-de-juegos:theme');
+      var theme = raw ? JSON.parse(raw) : 'dark';
+      if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    } catch (e) { /* no-op */ }
+  })();
+</script>
 </head>
 <body>
 
@@ -54,10 +65,34 @@
         <h1>Noche de Juegos</h1>
       </div>
     </div>
-    <div class="hub-stats" id="hub-stats"></div>
+    <div class="hub-header-right">
+      <div class="hub-stats" id="hub-stats"></div>
+      <div class="hub-icon-actions">
+        <button type="button" class="icon-btn" id="theme-toggle" aria-label="Cambiar a tema claro">
+          <svg id="theme-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+        </button>
+        <button type="button" class="icon-btn" id="fullscreen-toggle" aria-label="Pantalla completa" hidden>
+          <svg id="fullscreen-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+        </button>
+      </div>
+    </div>
   </header>
 
+  <div class="hub-toolbar">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" id="search-input" placeholder="Buscar un juego..." aria-label="Buscar un juego">
+    </div>
+    <div class="chip-row" id="category-chips"></div>
+  </div>
+
+  <div class="recent-section" id="recent-section" hidden>
+    <h3 class="section-label">Jugados recientemente</h3>
+    <div class="recent-row" id="recent-row"></div>
+  </div>
+
   <div class="shelf" id="shelf"></div>
+  <p class="empty-state" id="empty-state" hidden>No encontramos ningún juego con esos filtros. Probá con otra búsqueda o categoría.</p>
 </section>
 
 <!-- ============ Pantalla de un juego en curso ============ -->

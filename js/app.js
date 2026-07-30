@@ -11,6 +11,22 @@
     { hex: 'var(--player-pink)', name: 'Rosado' },
   ];
 
+  const ICONS = {
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+    moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>',
+    starOutline: '<path d="M12 3.5l2.47 5.36 5.78.55-4.36 3.98 1.28 5.86L12 16.2l-5.17 3.05 1.28-5.86-4.36-3.98 5.78-.55L12 3.5Z"/>',
+    expand: '<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>',
+    compress: '<path d="M9 3v3a2 2 0 0 1-2 2H4M15 3v3a2 2 0 0 0 2 2h3M9 21v-3a2 2 0 0 0-2-2H4M15 21v-3a2 2 0 0 1 2-2h3"/>',
+  };
+
+  function normalize(str) {
+    return (str || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function categoryOf(game) {
+    return (game.tag || '').split('·')[0].trim();
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const hubScreen = document.getElementById('screen-hub');
     const gameScreen = document.getElementById('screen-game');
@@ -19,13 +35,26 @@
     const setupOverlay = document.getElementById('setup-overlay');
     const setupCard = document.getElementById('setup-card');
     const gameContainer = document.getElementById('game-container');
+    const searchInput = document.getElementById('search-input');
+    const chipsEl = document.getElementById('category-chips');
+    const recentSection = document.getElementById('recent-section');
+    const recentRow = document.getElementById('recent-row');
+    const emptyState = document.getElementById('empty-state');
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const fullscreenToggle = document.getElementById('fullscreen-toggle');
+    const fullscreenIcon = document.getElementById('fullscreen-icon');
 
     let activeInstance = null;
+    let searchTerm = '';
+    let selectedCategory = 'todos';
+    let favoritesOnly = false;
 
     function showHub() {
       hubScreen.classList.add('active');
       gameScreen.classList.remove('active');
       renderStats();
+      renderRecent();
     }
 
     function showGame() {
@@ -45,10 +74,79 @@
       `;
     }
 
-    function renderShelf() {
+    // ---------- Filtros: búsqueda + categorías + favoritos ----------
+    function getFilteredGames() {
       const games = global.GameHub.getGames();
-      shelfEl.innerHTML = games.map((g) => `
+      const term = normalize(searchTerm);
+      return games.filter((g) => {
+        if (favoritesOnly && !Storage.isFavorite(g.id)) return false;
+        if (selectedCategory !== 'todos' && categoryOf(g) !== selectedCategory) return false;
+        if (term && !normalize(g.name).includes(term) && !normalize(g.tagline).includes(term) && !normalize(g.tag).includes(term)) return false;
+        return true;
+      });
+    }
+
+    function renderChips() {
+      const games = global.GameHub.getGames();
+      const categories = Array.from(new Set(games.map(categoryOf))).sort();
+      const chips = [
+        { key: 'todos', label: 'Todos' },
+        ...categories.map((c) => ({ key: c, label: c.charAt(0) + c.slice(1).toLowerCase() })),
+      ];
+      chipsEl.innerHTML = `
+        <button type="button" class="chip fav-chip ${favoritesOnly ? 'active' : ''}" id="chip-favorites">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="${favoritesOnly ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linejoin="round">${ICONS.starOutline}</svg>
+          Favoritos
+        </button>
+        ${chips.map((c) => `<button type="button" class="chip ${selectedCategory === c.key ? 'active' : ''}" data-key="${c.key}">${c.label}</button>`).join('')}
+      `;
+      chipsEl.querySelector('#chip-favorites').addEventListener('click', () => {
+        favoritesOnly = !favoritesOnly;
+        renderChips();
+        renderShelf();
+      });
+      chipsEl.querySelectorAll('.chip[data-key]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          selectedCategory = btn.dataset.key;
+          renderChips();
+          renderShelf();
+        });
+      });
+    }
+
+    // ---------- Jugados recientemente ----------
+    function renderRecent() {
+      const recentIds = Storage.getRecent();
+      const games = recentIds.map((id) => global.GameHub.getGame(id)).filter(Boolean);
+      if (!games.length) {
+        recentSection.hidden = true;
+        return;
+      }
+      recentSection.hidden = false;
+      recentRow.innerHTML = games.map((g) => `
+        <div class="recent-card" data-id="${g.id}" tabindex="0" role="button" aria-label="Jugar ${g.name}">
+          <div class="recent-icon">${g.icon}</div>
+          <span>${g.name}</span>
+        </div>
+      `).join('');
+      recentRow.querySelectorAll('.recent-card').forEach((card) => {
+        const open = () => openSetup(card.dataset.id);
+        card.addEventListener('click', open);
+        card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+      });
+    }
+
+    // ---------- Estantería principal ----------
+    function renderShelf() {
+      const games = getFilteredGames();
+      emptyState.hidden = games.length > 0;
+      shelfEl.innerHTML = games.map((g) => {
+        const fav = Storage.isFavorite(g.id);
+        return `
         <div class="game-box" data-id="${g.id}" tabindex="0" role="button" aria-label="Configurar ${g.name}">
+          <button type="button" class="fav-btn ${fav ? 'active' : ''}" data-fav-id="${g.id}" aria-label="${fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}" aria-pressed="${fav}">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="${fav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linejoin="round">${ICONS.starOutline}</svg>
+          </button>
           <div>
             <div class="box-icon">${g.icon}</div>
             <h2>${g.name}</h2>
@@ -59,12 +157,27 @@
             <span class="pill">Jugar →</span>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       shelfEl.querySelectorAll('.game-box').forEach((box) => {
         const open = () => openSetup(box.dataset.id);
         box.addEventListener('click', open);
         box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+      });
+      shelfEl.querySelectorAll('.fav-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          Storage.toggleFavorite(btn.dataset.favId);
+          if (favoritesOnly) renderShelf(); else {
+            const nowFav = Storage.isFavorite(btn.dataset.favId);
+            btn.classList.toggle('active', nowFav);
+            btn.setAttribute('aria-pressed', String(nowFav));
+            btn.setAttribute('aria-label', nowFav ? 'Quitar de favoritos' : 'Agregar a favoritos');
+            btn.querySelector('svg').setAttribute('fill', nowFav ? 'currentColor' : 'none');
+          }
+        });
+        btn.addEventListener('keydown', (e) => e.stopPropagation());
       });
     }
 
@@ -192,6 +305,7 @@
     }
 
     function launchGame(game, seats, speed) {
+      Storage.addRecent(game.id);
       showGame();
       gameContainer.className = `screen-inner game-${game.id}`;
       activeInstance = game.mount(gameContainer, {
@@ -210,6 +324,61 @@
       if (e.target === setupOverlay) closeSetup();
     });
 
+    // ---------- Buscador en tiempo real ----------
+    let searchDebounce = null;
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(searchDebounce);
+      const value = e.target.value;
+      searchDebounce = setTimeout(() => {
+        searchTerm = value;
+        renderShelf();
+      }, 120);
+    });
+
+    // ---------- Modo oscuro / claro ----------
+    function applyThemeIcon(theme) {
+      const isLight = theme === 'light';
+      themeIcon.innerHTML = isLight ? ICONS.moon : ICONS.sun;
+      themeToggle.setAttribute('aria-label', isLight ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro');
+    }
+    function setTheme(theme) {
+      if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      else document.documentElement.removeAttribute('data-theme');
+      Storage.setTheme(theme);
+      applyThemeIcon(theme);
+    }
+    themeToggle.addEventListener('click', () => {
+      const current = Storage.getTheme();
+      setTheme(current === 'light' ? 'dark' : 'light');
+    });
+    applyThemeIcon(Storage.getTheme());
+
+    // ---------- Pantalla completa ----------
+    const fsEl = document.documentElement;
+    const fsSupported = !!(fsEl.requestFullscreen || fsEl.webkitRequestFullscreen);
+    function isFullscreen() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement);
+    }
+    function applyFullscreenIcon() {
+      fullscreenIcon.innerHTML = isFullscreen() ? ICONS.compress : ICONS.expand;
+      fullscreenToggle.setAttribute('aria-label', isFullscreen() ? 'Salir de pantalla completa' : 'Pantalla completa');
+    }
+    if (fsSupported) {
+      fullscreenToggle.hidden = false;
+      fullscreenToggle.addEventListener('click', () => {
+        if (isFullscreen()) {
+          (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        } else {
+          const result = (fsEl.requestFullscreen || fsEl.webkitRequestFullscreen).call(fsEl);
+          if (result && result.catch) result.catch(() => {});
+        }
+      });
+      document.addEventListener('fullscreenchange', applyFullscreenIcon);
+      document.addEventListener('webkitfullscreenchange', applyFullscreenIcon);
+      applyFullscreenIcon();
+    }
+
+    renderChips();
     renderShelf();
     showHub();
   });
