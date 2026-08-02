@@ -33,6 +33,9 @@
       stats[gameId].partidas += 1;
       if (outcome === 'human-win') stats[gameId].victoriasHumano += 1;
       Storage.set('stats', stats);
+      if (global.GameHub.Haptics) {
+        global.GameHub.Haptics.vibrate(outcome === 'human-win' ? 'win' : 'lose');
+      }
       return stats;
     },
 
@@ -70,6 +73,14 @@
     },
     setTheme(theme) {
       Storage.set('theme', theme);
+    },
+
+    // ---------- Skin de tablero (aplica a todos los juegos con tablero) ----------
+    getBoardSkin() {
+      return Storage.get('board-skin', 'clasico');
+    },
+    setBoardSkin(skin) {
+      Storage.set('board-skin', skin);
     },
   };
 

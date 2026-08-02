@@ -84,3 +84,51 @@
   --ember-500: #c1443c;
   --ember-600: #9c342d;
 }
+
+/* =========================================================
+   Skins de tablero — variables consumidas por cualquier juego
+   con tablero (Parqués, Dominó, Ta-Te-Ti, Damas, Conecta 4).
+   Se seleccionan con [data-board-skin] en <html> y aplican a
+   toda la app; cada juego solo necesita usar estas variables
+   en vez de colores fijos para heredar el skin automáticamente.
+   ========================================================= */
+:root {
+  /* "Clásico" — fieltro y madera, el look por defecto del hub */
+  --board-bg: var(--felt-700);
+  --board-line: rgba(246,239,221,0.22);
+  --board-cell-a: rgba(246,239,221,0.05);
+  --board-cell-b: rgba(0,0,0,0.16);
+  --board-frame: var(--wood-700);
+  --board-accent: var(--gold-500);
+  --board-text: var(--ink-100);
+}
+
+[data-board-skin='madera'] {
+  --board-bg: #7a5330;
+  --board-line: rgba(43,28,18,0.55);
+  --board-cell-a: #8a6238;
+  --board-cell-b: #6b4726;
+  --board-frame: #4a3220;
+  --board-accent: #d9a441;
+  --board-text: #f6efdd;
+}
+
+[data-board-skin='neon'] {
+  --board-bg: #0c0f1f;
+  --board-line: #5ef1ff;
+  --board-cell-a: #141a33;
+  --board-cell-b: #0a0d1a;
+  --board-frame: #1e2547;
+  --board-accent: #ff4fd8;
+  --board-text: #eaf9ff;
+}
+
+[data-board-skin='pizarra'] {
+  --board-bg: #2b3339;
+  --board-line: rgba(246,239,221,0.5);
+  --board-cell-a: #333e45;
+  --board-cell-b: #242b30;
+  --board-frame: #1b2226;
+  --board-accent: #e0b93d;
+  --board-text: #f2f2f0;
+}

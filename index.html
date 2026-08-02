@@ -32,6 +32,10 @@
 <link rel="stylesheet" href="css/penales.css">
 <link rel="stylesheet" href="css/blackjack.css">
 <link rel="stylesheet" href="css/rummikub.css">
+<link rel="stylesheet" href="css/tateti.css">
+<link rel="stylesheet" href="css/damas.css">
+<link rel="stylesheet" href="css/conecta4.css">
+<link rel="stylesheet" href="css/basta.css">
 
 <script>
   // Se ejecuta antes de pintar la página para evitar el "flash" del tema incorrecto.
@@ -40,6 +44,9 @@
       var raw = localStorage.getItem('noche-de-juegos:theme');
       var theme = raw ? JSON.parse(raw) : 'dark';
       if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      var rawSkin = localStorage.getItem('noche-de-juegos:board-skin');
+      var skin = rawSkin ? JSON.parse(rawSkin) : 'clasico';
+      if (skin && skin !== 'clasico') document.documentElement.setAttribute('data-board-skin', skin);
     } catch (e) { /* no-op */ }
   })();
 </script>
@@ -74,6 +81,9 @@
         <button type="button" class="icon-btn" id="fullscreen-toggle" aria-label="Pantalla completa" hidden>
           <svg id="fullscreen-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
         </button>
+        <button type="button" class="icon-btn" id="settings-toggle" aria-label="Ajustes">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        </button>
       </div>
     </div>
   </header>
@@ -105,12 +115,43 @@
   <div class="panel setup-card" id="setup-card"></div>
 </div>
 
+<!-- ============ Overlay de ajustes del hub ============ -->
+<div class="setup-overlay" id="settings-overlay" hidden>
+  <div class="panel setup-card" id="settings-card">
+    <h2>Ajustes</h2>
+    <p class="sub">Estas preferencias se guardan en este dispositivo y aplican a todos los juegos.</p>
+    <div class="setup-field">
+      <label for="haptics-select">Vibración háptica</label>
+      <select id="haptics-select">
+        <option value="off">Desactivada</option>
+        <option value="clave">Solo eventos importantes (ganar, perder)</option>
+        <option value="frecuente">Frecuente (casi toda interacción)</option>
+      </select>
+    </div>
+    <div class="setup-field">
+      <label for="board-skin-select">Skin de tablero</label>
+      <select id="board-skin-select">
+        <option value="clasico">Clásico</option>
+        <option value="madera">Madera</option>
+        <option value="neon">Neón</option>
+        <option value="pizarra">Pizarra</option>
+      </select>
+    </div>
+    <div class="setup-actions">
+      <button type="button" class="btn btn-primary" id="settings-close">Listo</button>
+    </div>
+  </div>
+</div>
+
 <!-- Núcleo -->
 <script src="js/core/event-bus.js"></script>
 <script src="js/core/storage.js"></script>
+<script src="js/core/haptics.js"></script>
 <script src="js/core/dice.js"></script>
 <script src="js/core/autoplay.js"></script>
 <script src="js/core/game-registry.js"></script>
+<script src="js/core/rules.js"></script>
+<script src="js/core/rules-content.js"></script>
 
 <!-- Parqués -->
 <script src="js/games/parques/board-data.js"></script>
@@ -186,6 +227,25 @@
 <script src="js/games/rummikub/rummikub-bot.js"></script>
 <script src="js/games/rummikub/rummikub-ui.js"></script>
 
+<!-- Ta-Te-Ti -->
+<script src="js/games/tateti/tateti-engine.js"></script>
+<script src="js/games/tateti/tateti-bot.js"></script>
+<script src="js/games/tateti/tateti-ui.js"></script>
+
+<!-- Damas -->
+<script src="js/games/damas/damas-engine.js"></script>
+<script src="js/games/damas/damas-bot.js"></script>
+<script src="js/games/damas/damas-ui.js"></script>
+
+<!-- Conecta 4 -->
+<script src="js/games/conecta4/conecta4-engine.js"></script>
+<script src="js/games/conecta4/conecta4-bot.js"></script>
+<script src="js/games/conecta4/conecta4-ui.js"></script>
+
+<!-- Basta / Stop -->
+<script src="js/games/basta/basta-data.js"></script>
+<script src="js/games/basta/basta-engine.js"></script>
+<script src="js/games/basta/basta-ui.js"></script>
 
 <!-- Hub -->
 <script src="js/app.js"></script>

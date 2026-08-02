@@ -17,17 +17,17 @@
   aspect-ratio: 1 / 1;
   width: 100%;
   gap: 1px;
-  background: var(--wood-900);
+  background: var(--board-frame);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
 
-.pq-cell { position: relative; background: var(--felt-800); display: flex; align-items: center; justify-content: center; flex-wrap: wrap; padding: 1px; }
-.pq-cell.zone-void { background: var(--wood-900); }
-.pq-cell.zone-track { background: var(--felt-700); }
-.pq-cell.zone-track.safe { background: var(--felt-600); }
-.pq-cell.zone-track.safe::after { content: "★"; position: absolute; font-size: 8px; color: var(--gold-500); opacity: 0.7; top: 1px; }
-.pq-cell.zone-center { background: radial-gradient(circle, var(--gold-500), var(--wood-700) 70%); }
+.pq-cell { position: relative; background: var(--board-cell-a); display: flex; align-items: center; justify-content: center; flex-wrap: wrap; padding: 1px; }
+.pq-cell.zone-void { background: var(--board-frame); }
+.pq-cell.zone-track { background: var(--board-bg); }
+.pq-cell.zone-track.safe { background: var(--board-cell-b); }
+.pq-cell.zone-track.safe::after { content: "★"; position: absolute; font-size: 8px; color: var(--board-accent); opacity: 0.85; top: 1px; }
+.pq-cell.zone-center { background: radial-gradient(circle, var(--board-accent), var(--board-frame) 70%); }
 
 .pq-cell.zone-yard { background: var(--felt-800); }
 .pq-cell.zone-yard.color-red { background: color-mix(in srgb, var(--player-red) 16%, var(--felt-800)); }

@@ -44,6 +44,11 @@
     const themeIcon = document.getElementById('theme-icon');
     const fullscreenToggle = document.getElementById('fullscreen-toggle');
     const fullscreenIcon = document.getElementById('fullscreen-icon');
+    const settingsToggle = document.getElementById('settings-toggle');
+    const settingsOverlay = document.getElementById('settings-overlay');
+    const settingsClose = document.getElementById('settings-close');
+    const hapticsSelect = document.getElementById('haptics-select');
+    const boardSkinSelect = document.getElementById('board-skin-select');
 
     let activeInstance = null;
     let searchTerm = '';
@@ -318,6 +323,7 @@
           showHub();
         },
       });
+      if (global.GameHub.Rules) global.GameHub.Rules.attachRulesButton(gameContainer, game.id);
     }
 
     setupOverlay.addEventListener('click', (e) => {
@@ -377,6 +383,31 @@
       document.addEventListener('webkitfullscreenchange', applyFullscreenIcon);
       applyFullscreenIcon();
     }
+
+    // ---------- Ajustes: vibración háptica + skin de tablero ----------
+    function applyBoardSkin(skin) {
+      if (skin && skin !== 'clasico') document.documentElement.setAttribute('data-board-skin', skin);
+      else document.documentElement.removeAttribute('data-board-skin');
+    }
+    function openSettings() {
+      const Haptics = global.GameHub.Haptics;
+      hapticsSelect.value = Haptics ? Haptics.getMode() : Storage.get('haptics-mode', 'clave');
+      boardSkinSelect.value = Storage.getBoardSkin();
+      settingsOverlay.hidden = false;
+    }
+    settingsToggle.addEventListener('click', openSettings);
+    settingsClose.addEventListener('click', () => { settingsOverlay.hidden = true; });
+    settingsOverlay.addEventListener('click', (e) => { if (e.target === settingsOverlay) settingsOverlay.hidden = true; });
+    hapticsSelect.addEventListener('change', (e) => {
+      if (global.GameHub.Haptics) global.GameHub.Haptics.setMode(e.target.value);
+      else Storage.set('haptics-mode', e.target.value);
+      if (global.GameHub.Haptics && e.target.value !== 'off') global.GameHub.Haptics.vibrate('select');
+    });
+    boardSkinSelect.addEventListener('change', (e) => {
+      Storage.setBoardSkin(e.target.value);
+      applyBoardSkin(e.target.value);
+    });
+    applyBoardSkin(Storage.getBoardSkin());
 
     renderChips();
     renderShelf();

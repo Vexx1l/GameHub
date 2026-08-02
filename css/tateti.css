@@ -1,0 +1,48 @@
+.tateti-layout {
+  max-width: 720px; margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: var(--space-3);
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .tateti-layout { grid-template-columns: 1fr; }
+}
+
+.tateti-main { padding: var(--space-4); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+.tateti-side { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
+
+.turn-indicator { font-size: 0.95rem; color: var(--ink-300); display: flex; align-items: center; gap: 8px; min-height: 1.4em; }
+
+.tateti-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 6px;
+  width: min(360px, 78vw);
+  aspect-ratio: 1 / 1;
+  background: var(--board-frame);
+  padding: 6px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+.tt-cell {
+  background: var(--board-bg);
+  border: 1px solid var(--board-line);
+  border-radius: var(--radius-sm);
+  color: var(--board-text);
+  font-size: 2.4rem;
+  font-family: var(--font-display);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.tt-cell:hover:not(:disabled) { background: var(--board-cell-a); }
+.tt-cell:active:not(:disabled) { transform: scale(0.95); }
+.tt-cell:disabled { cursor: default; }
+.tt-cell.is-x { color: var(--gold-500); }
+.tt-cell.is-o { color: var(--ember-500); }
+.tt-cell.is-win { background: color-mix(in srgb, var(--board-accent) 30%, var(--board-bg)); box-shadow: inset 0 0 0 2px var(--board-accent); }
+
+.log { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-300); max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }

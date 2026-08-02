@@ -10,7 +10,7 @@
 }
 
 .domino-hands, .domino-side { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
-.domino-table { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); min-height: 320px; }
+.domino-table { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); min-height: 320px; background: linear-gradient(180deg, var(--board-bg), var(--felt-800)); border: 1px solid var(--board-line); }
 
 .hand-block { padding: 8px; border-radius: var(--radius-md); background: rgba(0,0,0,0.14); }
 .hand-block.is-active { background: rgba(217,164,65,0.12); box-shadow: inset 0 0 0 1px rgba(217,164,65,0.4); }
@@ -29,7 +29,7 @@
 }
 .domino-tile .half { padding: 5px 8px; min-width: 12px; text-align: center; }
 .domino-tile .div { width: 1px; background: rgba(0,0,0,0.25); align-self: stretch; }
-.domino-tile.is-double { box-shadow: 0 0 0 2px var(--gold-500), 0 2px 3px rgba(0,0,0,0.35); }
+.domino-tile.is-double { box-shadow: 0 0 0 2px var(--board-accent), 0 2px 3px rgba(0,0,0,0.35); }
 .domino-tile.tile-back { background: linear-gradient(155deg, var(--wood-700), var(--wood-900)); width: 32px; height: 26px; }
 .domino-tile.on-board { flex-shrink: 0; }
 
