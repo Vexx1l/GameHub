@@ -7,15 +7,28 @@
     const seats = config.seats;
     const engine = new GeneralaEngine(seats);
     const autoplay = global.GameHub.createAutoplay({ storageKey: 'autoplay:generala', delay: 3000 });
-    const hasBots = seats.some((s) => s.type === 'bot');
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
+    const hasBots = !online && seats.some((s) => s.type === 'bot');
     let botTimer = null;
     let destroyed = false;
+
+    // En online, cada dispositivo corre su propio engine y sólo aplica una
+    // jugada cuando llega confirmada por la red (ver netplay.js). `roll()`
+    // usa Dice.roll() con la semilla compartida, así que el resultado sale
+    // igual en todas las pantallas sin viajar por la red.
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Generala</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
         ${hasBots ? `
           <div class="speed-control">
@@ -91,16 +104,24 @@
       turnEl.innerHTML = `<span class="swatch" style="background:${seat.hex}"></span> Turno de <b>${seat.label}</b> ${seat.type === 'bot' ? '(Bot)' : ''}`;
     }
 
+    function isMyTurn(seat) {
+      return online ? seat.id === mySeatId : seat.type === 'human';
+    }
+
     function renderDice() {
       const seat = engine.currentSeat;
-      const canHold = !engine.roundOver && seat.type === 'human' && engine.phase === 'rolling' && engine.rollCount > 0 && engine.rollsLeft > 0;
+      const canHold = !engine.roundOver && isMyTurn(seat) && engine.phase === 'rolling' && engine.rollCount > 0 && engine.rollsLeft > 0;
       diceEl.innerHTML = engine.dice.map((v, i) => {
         const held = engine.held[i];
         return `<button class="die ${held ? 'is-held' : ''}" data-idx="${i}" ${canHold ? '' : 'disabled'}>${engine.rollCount > 0 ? v : '?'}</button>`;
       }).join('');
       if (canHold) {
         diceEl.querySelectorAll('.die').forEach((btn) => {
-          btn.addEventListener('click', () => engine.toggleHold(seat.id, Number(btn.dataset.idx)));
+          btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.idx);
+            if (online) { online.submitAction('toggleHold', [seat.id, idx]); return; }
+            engine.toggleHold(seat.id, idx);
+          });
         });
       }
     }
@@ -109,19 +130,33 @@
       actionsEl.innerHTML = '';
       if (engine.roundOver) return;
       const seat = engine.currentSeat;
-      if (seat.type !== 'human' || engine.phase !== 'rolling') return;
+      if (!isMyTurn(seat) || engine.phase !== 'rolling') {
+        if (online && engine.phase === 'rolling') {
+          const hint = document.createElement('p');
+          hint.className = 'empty-hint';
+          hint.textContent = `Esperando a ${seat.label}…`;
+          actionsEl.appendChild(hint);
+        }
+        return;
+      }
       if (engine.rollsLeft > 0) {
         const rollBtn = document.createElement('button');
         rollBtn.className = 'btn btn-primary';
         rollBtn.textContent = engine.rollCount === 0 ? 'Tirar dados' : `Tirar de nuevo (${engine.rollsLeft} tiradas)`;
-        rollBtn.addEventListener('click', () => engine.roll(seat.id));
+        rollBtn.addEventListener('click', () => {
+          if (online) { online.submitAction('roll', [seat.id]); return; }
+          engine.roll(seat.id);
+        });
         actionsEl.appendChild(rollBtn);
       }
       if (engine.rollCount > 0 && engine.rollsLeft > 0) {
         const stopBtn = document.createElement('button');
         stopBtn.className = 'btn btn-ghost';
         stopBtn.textContent = 'Plantarse y anotar';
-        stopBtn.addEventListener('click', () => engine.stopRolling(seat.id));
+        stopBtn.addEventListener('click', () => {
+          if (online) { online.submitAction('stopRolling', [seat.id]); return; }
+          engine.stopRolling(seat.id);
+        });
         actionsEl.appendChild(stopBtn);
       }
     }
@@ -130,7 +165,7 @@
       categoriesEl.innerHTML = '';
       if (engine.roundOver || engine.phase !== 'choosing-category') return;
       const seat = engine.currentSeat;
-      if (seat.type !== 'human') {
+      if (!isMyTurn(seat)) {
         const hint = document.createElement('p');
         hint.className = 'empty-hint';
         hint.textContent = `${seat.label} está eligiendo dónde anotar…`;
@@ -150,13 +185,17 @@
         const btn = document.createElement('button');
         btn.className = 'btn btn-ghost category-btn';
         btn.innerHTML = `<span>${cat.label}${servida && preview === 100 ? ' ★' : ''}</span><span class="mono">${preview} pts</span>`;
-        btn.addEventListener('click', () => engine.scoreCategory(seat.id, cat.id));
+        btn.addEventListener('click', () => {
+          if (online) { online.submitAction('scoreCategory', [seat.id, cat.id]); return; }
+          engine.scoreCategory(seat.id, cat.id);
+        });
         grid.appendChild(btn);
       });
       categoriesEl.appendChild(grid);
     }
 
     function scheduleBotRollStep() {
+      if (online) return;
       clearTimeout(botTimer);
       const delay = Number(speedInput ? speedInput.value : 700);
       botTimer = setTimeout(() => {
@@ -181,6 +220,7 @@
     }
 
     function scheduleBotCategoryStep() {
+      if (online) return;
       clearTimeout(botTimer);
       const delay = Number(speedInput ? speedInput.value : 700);
       botTimer = setTimeout(() => {
@@ -286,6 +326,7 @@
     name: 'Generala',
     tagline: 'Tira los 5 dados hasta 3 veces y arma escaleras, fulles, pókeres y la Generala antes que nadie.',
     tag: 'DADOS · 1 A 8 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="6" y="24" width="20" height="20" rx="5" fill="#F6EFDD" transform="rotate(-12 16 34)"/>
       <rect x="26" y="10" width="22" height="22" rx="5" fill="#F6EFDD" transform="rotate(8 37 21)"/>

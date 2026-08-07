@@ -70,7 +70,7 @@
       categories.forEach((cat) => WORD_BANK[cat].forEach((w) => pool.push({ word: w, category: cat })));
       let available = pool.filter((p) => !this.usedWords.has(p.word));
       if (!available.length) { this.usedWords.clear(); available = pool; }
-      const choice = available[Math.floor(Math.random() * available.length)];
+      const choice = Dice.shuffle(available)[0];
       this.usedWords.add(choice.word);
       return choice;
     }

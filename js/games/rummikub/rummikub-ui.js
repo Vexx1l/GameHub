@@ -12,22 +12,31 @@
   function mount(container, config) {
     const seats = config.seats;
     const engine = new Engine(seats);
-    const spectatorMode = seats.every((s) => s.type === 'bot');
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
+    const spectatorMode = online ? !mySeatId : seats.every((s) => s.type === 'bot');
     let selected = new Set();
     let extendMode = false;
     let botTimer = null;
     let destroyed = false;
+
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Rummikub</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
-        <div class="speed-control">
+        ${online ? '' : `<div class="speed-control">
           <label class="pill" for="rk-speed">Velocidad bots</label>
           <input type="range" id="rk-speed" min="150" max="1600" step="50" value="${config.speed || 650}">
-        </div>
+        </div>`}
       </div>
       <div class="rk-layout">
         <div class="panel rk-board-panel">
@@ -79,7 +88,7 @@
     function seatById(id) { return seats.find((s) => s.id === id); }
 
     function humanSeat() {
-      return seats.find((s) => s.type === 'human');
+      return online ? seats.find((s) => s.id === mySeatId) : seats.find((s) => s.type === 'human');
     }
 
     function renderBoard() {
@@ -100,10 +109,17 @@
           el.addEventListener('click', () => {
             const idx = Number(el.dataset.index);
             const [uid] = Array.from(selected);
-            const result = engine.extendSet(humanSeat().id, idx, uid);
-            if (!result.ok) log(`⚠ ${result.error}`);
+            const seatId = humanSeat().id;
             selected.clear();
             extendMode = false;
+            if (online) {
+              if (seatId !== mySeatId) return;
+              online.submitAction('extendSet', [seatId, idx, uid]);
+              renderAll();
+              return;
+            }
+            const result = engine.extendSet(seatId, idx, uid);
+            if (!result.ok) log(`⚠ ${result.error}`);
             renderAll();
           });
         });
@@ -174,7 +190,14 @@
     }
 
     function renderActions(isHumanTurn, human) {
-      if (!isHumanTurn) { actionsEl.innerHTML = ''; return; }
+      if (!isHumanTurn) {
+        if (online && engine.currentSeat && !engine.roundOver) {
+          actionsEl.innerHTML = `<p class="empty-hint">Esperando a ${engine.currentSeat.label}…</p>`;
+        } else {
+          actionsEl.innerHTML = '';
+        }
+        return;
+      }
       const parts = [];
       parts.push(`<button class="btn btn-primary" id="rk-play-btn" ${selected.size >= 3 ? '' : 'disabled'}>Jugar selección como conjunto nuevo</button>`);
       if (engine.hasMelded[human.id]) {
@@ -186,9 +209,16 @@
 
       const playBtn = actionsEl.querySelector('#rk-play-btn');
       if (playBtn) playBtn.addEventListener('click', () => {
-        const result = engine.playNewSet(human.id, Array.from(selected));
-        if (!result.ok) log(`⚠ ${result.error}`);
+        const uids = Array.from(selected);
         selected.clear();
+        if (online) {
+          if (human.id !== mySeatId) return;
+          online.submitAction('playNewSet', [human.id, uids]);
+          renderAll();
+          return;
+        }
+        const result = engine.playNewSet(human.id, uids);
+        if (!result.ok) log(`⚠ ${result.error}`);
         renderAll();
       });
       const extendBtn = actionsEl.querySelector('#rk-extend-btn');
@@ -198,15 +228,26 @@
       });
       const endBtn = actionsEl.querySelector('#rk-end-btn');
       if (endBtn) endBtn.addEventListener('click', () => {
+        if (online) {
+          if (human.id !== mySeatId) return;
+          online.submitAction('endTurn', [human.id]);
+          return;
+        }
         engine.endTurn(human.id);
       });
       const drawBtn = actionsEl.querySelector('#rk-draw-btn');
       if (drawBtn) drawBtn.addEventListener('click', () => {
+        if (online) {
+          if (human.id !== mySeatId) return;
+          online.submitAction('drawTile', [human.id]);
+          return;
+        }
         engine.drawTile(human.id);
       });
     }
 
     function scheduleBotTurn() {
+      if (online) return;
       clearTimeout(botTimer);
       const delay = Number(speedInput.value);
       botTimer = setTimeout(() => {
@@ -305,6 +346,7 @@
     name: 'Rummikub',
     tagline: 'Forma grupos y escaleras con fichas numeradas antes que los demás. Cuidado con los comodines.',
     tag: 'FICHAS · 2 A 4 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="8" y="16" width="12" height="24" rx="3" fill="#f6efdd" stroke="#2b1c12" stroke-opacity="0.4"/>
       <text x="14" y="32" font-size="12" font-weight="800" fill="#c1443c" text-anchor="middle" font-family="Georgia, serif">7</text>

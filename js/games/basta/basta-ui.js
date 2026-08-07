@@ -7,19 +7,32 @@
     const seats = config.seats;
     const engine = new BastaEngine(seats);
     const autoplay = global.GameHub.createAutoplay({ storageKey: 'autoplay:basta', delay: 3000 });
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
     let destroyed = false;
     let timeLeft = WRITE_SECONDS;
     let timerInterval = null;
     let botFillTimer = null;
+    // En online cada campo se manda con un pequeño debounce (no tecla por
+    // tecla) para no saturar la sala; se vacían todas de una al escribir
+    // "¡BASTA!" o al salir del campo, así el resto ve la última versión.
+    const pendingFieldTimers = {};
+
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     const humanSeats = seats.filter((s) => s.type === 'human');
-    let humanIdx = 0; // a quién le toca escribir ahora (si hay varios humanos)
+    let humanIdx = 0; // a quién le toca escribir ahora (sólo aplica en modo local hotseat)
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Basta / Stop</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
         <div class="pill" id="bs-timer"></div>
       </div>
@@ -80,7 +93,54 @@
       });
     }
 
+    function flushField(seatId, category, value) {
+      const key = `${seatId}|${category}`;
+      clearTimeout(pendingFieldTimers[key]);
+      delete pendingFieldTimers[key];
+      if (online) online.submitAction('setAnswer', [seatId, category, value]);
+      else engine.setAnswer(seatId, category, value);
+    }
+
+    function scheduleField(seatId, category, value) {
+      const key = `${seatId}|${category}`;
+      clearTimeout(pendingFieldTimers[key]);
+      pendingFieldTimers[key] = setTimeout(() => flushField(seatId, category, value), 500);
+    }
+
+    function flushAllPending() {
+      Object.keys(pendingFieldTimers).forEach((key) => clearTimeout(pendingFieldTimers[key]));
+    }
+
     function renderWritePanel() {
+      if (online) {
+        if (!mySeatId) {
+          writeEl.innerHTML = `<p class="sub">Modo espectador — mirando cómo el resto completa sus categorías…</p>`;
+          return;
+        }
+        writeEl.innerHTML = `
+          <p class="sub">Completá cada categoría con una palabra que empiece con <b>${engine.letter}</b>. El resto está escribiendo la suya al mismo tiempo, cada uno desde su pantalla.</p>
+          <div class="basta-fields" id="bs-fields">
+            ${engine.categories.map((cat, i) => `
+              <div class="basta-field">
+                <label for="bs-input-${i}">${cat}</label>
+                <input type="text" id="bs-input-${i}" data-cat="${cat}" autocomplete="off" value="${engine.answers[mySeatId][cat] || ''}">
+              </div>
+            `).join('')}
+          </div>
+          <div class="setup-actions">
+            <button type="button" class="btn btn-danger" id="bs-stop">¡BASTA! (termina la ronda ya)</button>
+          </div>
+        `;
+        writeEl.querySelectorAll('#bs-fields input').forEach((input) => {
+          input.addEventListener('input', () => scheduleField(mySeatId, input.dataset.cat, input.value));
+          input.addEventListener('blur', () => flushField(mySeatId, input.dataset.cat, input.value));
+        });
+        writeEl.querySelector('#bs-stop').addEventListener('click', () => {
+          writeEl.querySelectorAll('#bs-fields input').forEach((input) => flushField(mySeatId, input.dataset.cat, input.value));
+          finishRound(mySeatId);
+        });
+        return;
+      }
       if (humanSeats.length === 0) {
         writeEl.innerHTML = `<p class="sub">Los bots están completando sus categorías… la ronda termina sola en unos segundos.</p>`;
         return;
@@ -135,6 +195,7 @@
       if (engine.phase !== 'writing') return;
       clearInterval(timerInterval);
       clearTimeout(botFillTimer);
+      if (online) { online.submitAction('stop', [calledBySeatId]); return; }
       engine.stop(calledBySeatId);
     }
 
@@ -179,6 +240,7 @@
 
       const startNext = () => {
         roundEndOverlay.hidden = true;
+        flushAllPending();
         humanIdx = 0;
         engine.startRound();
         beginWritingPhase();
@@ -207,6 +269,10 @@
     function beginWritingPhase() {
       letterEl.textContent = engine.letter;
       startTimer();
+      if (online) {
+        renderWritePanel();
+        return;
+      }
       fillBots();
       renderWritePanel();
       if (humanSeats.length === 0) {
@@ -220,6 +286,7 @@
     container.querySelector('.back-btn').addEventListener('click', () => {
       clearInterval(timerInterval);
       clearTimeout(botFillTimer);
+      flushAllPending();
       autoplay.cancel();
       config.onExit();
     });
@@ -233,6 +300,7 @@
         destroyed = true;
         clearInterval(timerInterval);
         clearTimeout(botFillTimer);
+        flushAllPending();
         autoplay.cancel();
         engine.bus.clear();
       },
@@ -245,6 +313,7 @@
     name: 'Basta / Stop',
     tagline: 'Sale una letra: escribe rápido un nombre, animal, color y más antes de que alguien grite ¡BASTA!',
     tag: 'PALABRAS · 1 A 8 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="8" y="8" width="40" height="40" rx="8" fill="#c1443c"/>
       <text x="28" y="37" font-family="Georgia, serif" font-size="26" font-weight="800" fill="#F6EFDD" text-anchor="middle">B</text>

@@ -7,16 +7,25 @@
     const seats = config.seats;
     const engine = new DamasEngine(seats);
     const autoplay = global.GameHub.createAutoplay({ storageKey: 'autoplay:damas', delay: 2000 });
-    const hasBots = seats.some((s) => s.type === 'bot');
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
+    const hasBots = !online && seats.some((s) => s.type === 'bot');
     let botTimer = null;
     let destroyed = false;
     let selected = null; // [r,c] pieza humana seleccionada
+
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Damas</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
         ${hasBots ? `
           <div class="speed-control">
@@ -112,12 +121,17 @@
     function handleSquareClick(r, c) {
       const seat = seatFor(engine.turnSeatId);
       if (seat.type !== 'human' || engine.over) return;
+      if (online && seat.id !== mySeatId) return; // no es tu turno en esta sala
 
       if (selected) {
         const dests = engine.destinationsFor(selected[0], selected[1]);
         const dest = dests.find((d) => d.to[0] === r && d.to[1] === c);
         if (dest) {
           const from = selected;
+          if (online) {
+            online.submitAction('move', [seat.id, from, [r, c]]);
+            return; // esperamos a que la jugada vuelva confirmada por la red
+          }
           engine.move(seat.id, from, [r, c]);
           selected = engine.chainFrom ? [r, c] : null;
           return;
@@ -146,6 +160,7 @@
     }
 
     function scheduleBotMove() {
+      if (online) return; // sin bots en partidas online
       clearTimeout(botTimer);
       const seat = seatFor(engine.turnSeatId);
       if (seat.type !== 'bot') return;
@@ -160,7 +175,7 @@
     }
 
     engine.bus.on('board-changed', () => { renderBoard(); renderCount(); });
-    engine.bus.on('chain-continues', () => { renderTurn(); renderBoard(); scheduleBotMove(); });
+    engine.bus.on('chain-continues', (payload) => { selected = (payload && payload.at) || null; renderTurn(); renderBoard(); scheduleBotMove(); });
     engine.bus.on('turn-changed', () => { selected = null; renderTurn(); renderBoard(); scheduleBotMove(); });
 
     engine.bus.on('round-ended', (result) => {
@@ -235,6 +250,7 @@
     name: 'Damas',
     tagline: 'El clásico juego de tablero: captura obligatoria, cadenas de saltos y coronación. Tú contra un rival o un bot.',
     tag: 'MESA · 2 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="6" y="6" width="44" height="44" rx="4" fill="#4a3220"/>
       <rect x="6" y="6" width="11" height="11" fill="#2b1c12"/>

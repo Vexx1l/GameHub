@@ -115,6 +115,11 @@
   <div class="panel setup-card" id="setup-card"></div>
 </div>
 
+<!-- ============ Overlay de sala online (multijugador) ============ -->
+<div class="setup-overlay" id="netplay-overlay" hidden>
+  <div class="panel setup-card" id="netplay-card"></div>
+</div>
+
 <!-- ============ Overlay de ajustes del hub ============ -->
 <div class="setup-overlay" id="settings-overlay" hidden>
   <div class="panel setup-card" id="settings-card">
@@ -152,6 +157,13 @@
 <script src="js/core/game-registry.js"></script>
 <script src="js/core/rules.js"></script>
 <script src="js/core/rules-content.js"></script>
+
+<!-- Multijugador online: SDK de Firebase (sólo Realtime Database, en modo "compat" para no necesitar build step) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script src="js/core/firebase-config.js"></script>
+<script src="js/core/netplay.js"></script>
+<script src="js/core/netplay-ui.js"></script>
 
 <!-- Parqués -->
 <script src="js/games/parques/board-data.js"></script>

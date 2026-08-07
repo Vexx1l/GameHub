@@ -269,6 +269,29 @@
 .setup-actions { display: flex; gap: 10px; margin-top: var(--space-4); }
 .setup-actions .btn { flex: 1; }
 
+/* ============ Sala online (multijugador) ============ */
+.online-play-row { display: flex; gap: 10px; margin-top: var(--space-3); }
+.online-play-row .btn { flex: 1; }
+.room-code-display {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: rgba(0,0,0,0.2); border-radius: var(--radius-md); padding: 12px 14px;
+  margin-top: var(--space-2);
+}
+.room-code {
+  font-family: var(--font-mono); font-size: 1.6rem; letter-spacing: 0.18em;
+  font-weight: 700; color: var(--gold-500);
+}
+.copy-link-row { display: flex; gap: 8px; margin-top: 10px; }
+.copy-link-row input {
+  flex: 1; min-width: 0; background: rgba(0,0,0,0.2); color: var(--ink-300);
+  border: 1px solid rgba(246,239,221,0.16); border-radius: var(--radius-sm);
+  padding: 8px 10px; font-family: var(--font-mono); font-size: 0.76rem;
+}
+.seat-row-btn { width: 100%; border: none; cursor: pointer; text-align: left; font-family: var(--font-body); }
+.seat-row-btn:disabled { cursor: default; opacity: 0.75; }
+.seat-row-btn .badge-connected { color: var(--player-green, #3e9142); }
+.seat-row-btn .badge-waiting { color: var(--ink-300); }
+
 /* ============ Reglas rápidas por juego ============ */
 .rules-card { max-width: 480px; }
 .rules-list { list-style: none; margin: 0 0 var(--space-2); padding: 0; display: flex; flex-direction: column; gap: 10px; }

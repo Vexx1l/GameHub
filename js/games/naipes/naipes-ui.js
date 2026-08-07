@@ -24,19 +24,28 @@
     const engine = new NaipesEngine(seats);
     const spectatorMode = seats.every((s) => s.type === 'bot');
     const autoplay = global.GameHub.createAutoplay({ storageKey: 'autoplay:naipes', delay: 3000 });
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
     let botTimer = null;
     let destroyed = false;
+
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Escalera y Trío</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
-        <div class="speed-control">
+        ${online ? '' : `<div class="speed-control">
           <label class="pill" for="na-speed">Velocidad bots</label>
           <input type="range" id="na-speed" min="150" max="1600" step="50" value="${config.speed || 650}">
-        </div>
+        </div>`}
       </div>
       <div class="naipes-layout">
         <div class="panel naipes-hands" id="na-hands"></div>
@@ -108,7 +117,7 @@
     function renderHands() {
       handsEl.innerHTML = seats.map((s) => {
         const hand = engine.hands[s.id];
-        const reveal = s.type === 'human' || spectatorMode;
+        const reveal = online ? (s.id === mySeatId || spectatorMode) : (s.type === 'human' || spectatorMode);
         const tilesHTML = reveal
           ? hand.map((c) => cardHTML(c, 'in-hand')).join('')
           : hand.map(() => '<div class="naipe-card tile-back"></div>').join('');
@@ -134,6 +143,35 @@
 
     // ---------- Elección de combinación al inicio de ronda ----------
     function runTypeSelection() {
+      if (online) {
+        if (!mySeatId || engine.declaredType[mySeatId]) { typeOverlay.hidden = true; return; }
+        let choice = '4-4-3';
+        typeCard.innerHTML = `
+          <h2>Elige tu combinación</h2>
+          <p class="sub">Vas a armar tu mano de 10 cartas con este objetivo. Los demás eligen la suya al mismo tiempo, desde su dispositivo.</p>
+          <div class="seat-toggle" id="na-my-type">
+            <button data-type="4-4-3" class="active">4-4-3</button>
+            <button data-type="5-3-3">5-3-3</button>
+          </div>
+          <div class="setup-actions">
+            <button class="btn btn-primary" id="na-type-confirm">Confirmar</button>
+          </div>
+        `;
+        const toggle = typeCard.querySelector('#na-my-type');
+        toggle.querySelectorAll('button').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            choice = btn.dataset.type;
+            toggle.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b === btn));
+          });
+        });
+        typeOverlay.hidden = false;
+        typeCard.querySelector('#na-type-confirm').addEventListener('click', () => {
+          typeOverlay.hidden = true;
+          online.submitAction('setDeclaredType', [mySeatId, choice]);
+          log('Elegiste tu combinación — esperando a que el resto elija la suya.');
+        });
+        return;
+      }
       const humanSeats = seats.filter((s) => s.type === 'human');
       seats.forEach((s) => {
         if (s.type === 'bot') {
@@ -192,6 +230,7 @@
         stockBtn.textContent = `Robar del mazo (${engine.stock.length})`;
         stockBtn.disabled = !engine.canDrawFromStock();
         stockBtn.addEventListener('click', () => {
+          if (online) { online.submitAction('drawFromStock', [seatId]); return; }
           engine.drawFromStock(seatId);
           renderPiles();
           renderHands();
@@ -203,6 +242,7 @@
           discardBtn.className = 'btn btn-ghost';
           discardBtn.innerHTML = `Tomar descarte ${cardHTML(top)}`;
           discardBtn.addEventListener('click', () => {
+            if (online) { online.submitAction('drawFromDiscard', [seatId]); return; }
             engine.drawFromDiscard(seatId);
             renderPiles();
             renderHands();
@@ -226,7 +266,8 @@
           winBtn.textContent = '¡Cerrar mano y ganar la ronda!';
           winBtn.addEventListener('click', () => {
             clearActions();
-            engine.declareWin(seatId, groups);
+            if (online) online.submitAction('declareWin', [seatId, groups]);
+            else engine.declareWin(seatId, groups);
           });
           actionsEl.appendChild(winBtn);
         }
@@ -239,7 +280,8 @@
           wrapper.innerHTML = cardHTML(card);
           wrapper.addEventListener('click', () => {
             clearActions();
-            engine.discardCard(seatId, card);
+            if (online) online.submitAction('discardCard', [seatId, card]);
+            else engine.discardCard(seatId, card);
           });
           handRow.appendChild(wrapper);
         });
@@ -249,6 +291,7 @@
 
     // ---------- Turno bot ----------
     function scheduleBotDraw() {
+      if (online) return;
       clearTimeout(botTimer);
       const delay = Number(speedInput.value);
       botTimer = setTimeout(() => {
@@ -272,6 +315,7 @@
     }
 
     function scheduleBotDiscard() {
+      if (online) return;
       clearTimeout(botTimer);
       const delay = Number(speedInput.value);
       botTimer = setTimeout(() => {
@@ -295,6 +339,17 @@
       clearActions();
       if (engine.roundOver) return;
       const seat = engine.currentSeat;
+      if (online) {
+        if (seat.id === mySeatId) {
+          showHumanTurn();
+        } else {
+          const hint = document.createElement('p');
+          hint.className = 'empty-hint';
+          hint.textContent = `Esperando a ${seat.label}…`;
+          actionsEl.appendChild(hint);
+        }
+        return;
+      }
       if (seat.type === 'bot') {
         scheduleBotDraw();
       } else {
@@ -318,6 +373,10 @@
     engine.bus.on('turn-changed', handleTurnStart);
     engine.bus.on('drew-card', ({ seatId, source }) => {
       log(`${seatById(seatId).label} robó ${source === 'stock' ? 'del mazo' : 'del descarte'}.`);
+      renderPiles();
+      renderHands();
+      const isMine = online ? seatId === mySeatId : seatById(seatId).type === 'human';
+      if (isMine) showHumanTurn();
     });
     engine.bus.on('discarded', ({ seatId, card }) => {
       const label = card.joker ? 'un comodín' : `${H.rankLabel(card.rank)}${card.suit}`;
@@ -394,6 +453,7 @@
     name: 'Escalera y Trío',
     tagline: 'Baraja doble + comodines: arma un 4-4-3 o un 5-3-3 antes que nadie.',
     tag: 'BARAJA · 4 A 8 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="6" y="10" width="26" height="36" rx="4" fill="#F6EFDD" stroke="#2b1c12" stroke-opacity="0.3" transform="rotate(-8 19 28)"/>
       <rect x="22" y="10" width="26" height="36" rx="4" fill="#F6EFDD" stroke="#2b1c12" stroke-opacity="0.3" transform="rotate(6 35 28)"/>

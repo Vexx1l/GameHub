@@ -8,15 +8,24 @@
     const seats = config.seats;
     const engine = new TriviaEngine(seats);
     const autoplay = global.GameHub.createAutoplay({ storageKey: 'autoplay:trivia', delay: 3000 });
-    const hasBots = seats.some((s) => s.type === 'bot');
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
+    const hasBots = !online && seats.some((s) => s.type === 'bot');
     let botTimer = null;
     let destroyed = false;
+
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Trivia</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
         ${hasBots ? `
           <div class="speed-control">
@@ -77,7 +86,7 @@
 
     function renderOptions(revealCorrect) {
       const seat = engine.currentSeat;
-      const isHumanTurn = !engine.roundOver && seat.type === 'human';
+      const isHumanTurn = !engine.roundOver && (online ? seat.id === mySeatId : seat.type === 'human');
       optionsEl.innerHTML = engine.question.options.map((opt, i) => {
         const discarded = engine.wrongTried.has(i);
         let cls = 'trivia-option';
@@ -90,7 +99,10 @@
       }).join('');
       if (isHumanTurn) {
         optionsEl.querySelectorAll('button:not([disabled])').forEach((btn) => {
-          btn.addEventListener('click', () => engine.answer(seat.id, Number(btn.dataset.idx)));
+          btn.addEventListener('click', () => {
+            if (online) { online.submitAction('answer', [seat.id, Number(btn.dataset.idx)]); return; }
+            engine.answer(seat.id, Number(btn.dataset.idx));
+          });
         });
       }
     }
@@ -102,6 +114,7 @@
     }
 
     function scheduleBotTurn() {
+      if (online) return;
       clearTimeout(botTimer);
       const delay = Number(speedInput ? speedInput.value : 900);
       botTimer = setTimeout(() => {
@@ -211,6 +224,7 @@
     name: 'Trivia',
     tagline: 'Preguntas de historia, ciencia, geografía, deportes, entretenimiento y arte. Responde antes que nadie.',
     tag: 'PREGUNTAS · 1 A 8 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="28" cy="28" r="22" fill="#12291d" stroke="var(--gold-500)" stroke-width="2.5"/>
       <text x="28" y="37" font-size="26" font-weight="800" fill="var(--gold-500)" text-anchor="middle" font-family="Georgia, serif">?</text>

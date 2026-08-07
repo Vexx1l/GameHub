@@ -229,6 +229,13 @@
                 ${game.seatSpec.allowedCounts.map((n) => `<option value="${n}" ${n === seatCount ? 'selected' : ''}>${n} jugador${n === 1 ? '' : 'es'}</option>`).join('')}
               </select>
             </div>` : ''}
+          ${game.online && global.GameHub.Net && global.GameHub.Net.configured ? `
+            <div class="online-play-row">
+              <button class="btn btn-primary" id="setup-online-create" type="button">Jugar online (crear sala)</button>
+              <button class="btn btn-ghost" id="setup-online-join" type="button">Unirme con código</button>
+            </div>
+            <p class="sub" style="margin-top:10px;">…o jugá en este mismo dispositivo, pasándose el turno:</p>
+          ` : ''}
           <div class="setup-field">
             <label>
               <input type="checkbox" id="spectator-toggle" ${spectator ? 'checked' : ''}>
@@ -265,6 +272,21 @@
           closeSetup();
           launchGame(game, seats, speed);
         });
+
+        const onlineCreateBtn = setupCard.querySelector('#setup-online-create');
+        const onlineJoinBtn = setupCard.querySelector('#setup-online-join');
+        if (onlineCreateBtn) {
+          onlineCreateBtn.addEventListener('click', () => {
+            closeSetup();
+            global.GameHub.NetplayUI.openCreate(game, buildSeatsForCount(game, seatCount), launchGame);
+          });
+        }
+        if (onlineJoinBtn) {
+          onlineJoinBtn.addEventListener('click', () => {
+            closeSetup();
+            global.GameHub.NetplayUI.openJoin(launchGame);
+          });
+        }
       }
 
       function renderSeatRows() {
@@ -309,21 +331,35 @@
       setupOverlay.hidden = true;
     }
 
-    function launchGame(game, seats, speed) {
+    function launchGame(game, seats, speed, netSession) {
       Storage.addRecent(game.id);
       showGame();
       gameContainer.className = `screen-inner game-${game.id}`;
+      if (global.GameHub.Dice) {
+        if (netSession && typeof netSession.rngSeed === 'number') global.GameHub.Dice.seed(netSession.rngSeed);
+        else global.GameHub.Dice.reset();
+      }
       activeInstance = game.mount(gameContainer, {
         seats,
         speed,
+        online: netSession || null,
         onExit: () => {
           if (activeInstance && activeInstance.destroy) activeInstance.destroy();
           activeInstance = null;
           gameContainer.innerHTML = '';
+          if (global.GameHub.Dice) global.GameHub.Dice.reset();
+          if (netSession) netSession.leave();
           showHub();
         },
       });
       if (global.GameHub.Rules) global.GameHub.Rules.attachRulesButton(gameContainer, game.id);
+    }
+
+    // ---------- Entrar directo a una sala por link (?room=CODIGO) ----------
+    function tryAutoJoinFromURL() {
+      const code = new URLSearchParams(location.search).get('room');
+      if (!code || !global.GameHub.Net || !global.GameHub.Net.configured) return;
+      global.GameHub.NetplayUI.openJoin(launchGame, code.toUpperCase());
     }
 
     setupOverlay.addEventListener('click', (e) => {
@@ -412,5 +448,6 @@
     renderChips();
     renderShelf();
     showHub();
+    tryAutoJoinFromURL();
   });
 })(window);

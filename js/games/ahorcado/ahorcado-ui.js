@@ -26,16 +26,25 @@
     const seats = config.seats;
     const engine = new AhorcadoEngine(seats);
     const autoplay = global.GameHub.createAutoplay({ storageKey: 'autoplay:ahorcado', delay: 3000 });
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
     let botTimer = null;
     let destroyed = false;
 
-    const hasBots = seats.some((s) => s.type === 'bot');
+    const hasBots = !online && seats.some((s) => s.type === 'bot');
+
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Ahorcado</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
         ${hasBots ? `
           <div class="speed-control">
@@ -116,8 +125,13 @@
       turnEl.innerHTML = `<span class="swatch" style="background:${seat.hex}"></span> Turno de <b>${seat.label}</b> ${seat.type === 'bot' ? '(Bot)' : ''}`;
     }
 
+    function isMyTurn() {
+      if (engine.roundOver) return false;
+      return online ? engine.currentSeat.id === mySeatId : engine.currentSeat.type === 'human';
+    }
+
     function renderKeyboard() {
-      const isHumanTurn = !engine.roundOver && engine.currentSeat.type === 'human';
+      const isHumanTurn = isMyTurn();
       const seatId = engine.currentSeat.id;
       keyboardEl.innerHTML = KEYBOARD_LETTERS.map((l) => {
         const guessed = engine.guessedLetters.has(l);
@@ -128,13 +142,16 @@
       }).join('');
       if (isHumanTurn) {
         keyboardEl.querySelectorAll('button:not([disabled])').forEach((btn) => {
-          btn.addEventListener('click', () => engine.guessLetter(seatId, btn.dataset.letter));
+          btn.addEventListener('click', () => {
+            if (online) { online.submitAction('guessLetter', [seatId, btn.dataset.letter]); return; }
+            engine.guessLetter(seatId, btn.dataset.letter);
+          });
         });
       }
     }
 
     function renderGuessForm() {
-      const isHumanTurn = !engine.roundOver && engine.currentSeat.type === 'human';
+      const isHumanTurn = isMyTurn();
       guessWordEl.innerHTML = `
         <form id="ah-guess-form" class="guess-word-form">
           <input type="text" id="ah-guess-input" placeholder="Adivina la palabra completa" ${isHumanTurn ? '' : 'disabled'} autocomplete="off" maxlength="24">
@@ -146,12 +163,17 @@
         form.addEventListener('submit', (e) => {
           e.preventDefault();
           const input = guessWordEl.querySelector('#ah-guess-input');
-          if (input.value.trim()) { engine.guessWord(seatId, input.value); input.value = ''; }
+          if (input.value.trim()) {
+            if (online) online.submitAction('guessWord', [seatId, input.value]);
+            else engine.guessWord(seatId, input.value);
+            input.value = '';
+          }
         });
       }
     }
 
     function scheduleBotTurn() {
+      if (online) return;
       clearTimeout(botTimer);
       const delay = Number(speedInput ? speedInput.value : 700);
       botTimer = setTimeout(() => {
@@ -275,6 +297,7 @@
     name: 'Ahorcado',
     tagline: 'Adivina la palabra letra por letra antes de que se complete el dibujo. Quien acierte se lleva los puntos.',
     tag: 'PALABRAS · 1 A 6 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M8 48H30" stroke="#F6EFDD" stroke-width="3" stroke-linecap="round"/>
       <path d="M14 48V8H38" stroke="#F6EFDD" stroke-width="3" stroke-linecap="round"/>

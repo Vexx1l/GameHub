@@ -28,19 +28,28 @@
     const engine = new UnoEngine(seats);
     const spectatorMode = seats.every((s) => s.type === 'bot');
     const autoplay = global.GameHub.createAutoplay({ storageKey: 'autoplay:uno', delay: 3000 });
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
     let botTimer = null;
     let destroyed = false;
+
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>UNO</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
-        <div class="speed-control">
+        ${online ? '' : `<div class="speed-control">
           <label class="pill" for="uno-speed">Velocidad bots</label>
           <input type="range" id="uno-speed" min="150" max="1600" step="50" value="${config.speed || 650}">
-        </div>
+        </div>`}
       </div>
       <div class="uno-layout">
         <div class="panel uno-hands" id="uno-hands"></div>
@@ -136,7 +145,7 @@
       const current = engine.currentSeat;
       handsEl.innerHTML = seats.map((s) => {
         const hand = engine.hands[s.id];
-        const reveal = s.type === 'human' || spectatorMode;
+        const reveal = online ? (s.id === mySeatId || spectatorMode) : (s.type === 'human' || spectatorMode);
         const isCurrent = current && current.id === s.id;
         const clickable = isCurrent && s.type === 'human' && !engine.roundOver
           && (engine.phase === 'turn' || engine.phase === 'drawn');
@@ -169,17 +178,24 @@
         btn.addEventListener('click', () => {
           const uid = Number(btn.dataset.uid);
           const seatId = engine.currentSeat.id;
+          if (online && seatId !== mySeatId) return;
           const card = engine.hands[seatId].find((c) => c.uid === uid);
           if (!card) return;
           if (card.color === 'negro') {
-            openColorOverlay((color) => engine.playCard(seatId, uid, color));
+            openColorOverlay((color) => (online ? online.submitAction('playCard', [seatId, uid, color]) : engine.playCard(seatId, uid, color)));
+          } else if (online) {
+            online.submitAction('playCard', [seatId, uid]);
           } else {
             engine.playCard(seatId, uid);
           }
         });
       });
       handsEl.querySelectorAll('.uno-call-btn').forEach((btn) => {
-        btn.addEventListener('click', () => { engine.callUno(btn.dataset.seat); renderHands(); });
+        btn.addEventListener('click', () => {
+          if (online) online.submitAction('callUno', [btn.dataset.seat]);
+          else engine.callUno(btn.dataset.seat);
+          renderHands();
+        });
       });
     }
 
@@ -202,6 +218,7 @@
           btn.className = 'btn btn-primary';
           btn.textContent = `Robar carta (${engine.stock.length})`;
           btn.addEventListener('click', () => {
+            if (online) { online.submitAction('drawCard', [seatId]); return; }
             engine.drawCard(seatId);
             showHumanTurn();
           });
@@ -228,14 +245,18 @@
           const passBtn = document.createElement('button');
           passBtn.className = 'btn btn-ghost';
           passBtn.textContent = 'Guardar y pasar turno';
-          passBtn.addEventListener('click', () => engine.passAfterDraw(seatId));
+          passBtn.addEventListener('click', () => (online ? online.submitAction('passAfterDraw', [seatId]) : engine.passAfterDraw(seatId)));
           actionsEl.appendChild(passBtn);
         } else {
           const hint = document.createElement('p');
           hint.className = 'empty-hint';
           hint.textContent = 'La carta robada no sirve — pasando turno…';
           actionsEl.appendChild(hint);
-          setTimeout(() => { if (!destroyed) engine.passAfterDraw(seatId); }, 700);
+          setTimeout(() => {
+            if (destroyed) return;
+            if (online) online.submitAction('passAfterDraw', [seatId]);
+            else engine.passAfterDraw(seatId);
+          }, 700);
         }
       }
     }
@@ -279,6 +300,16 @@
       clearActions();
       if (engine.roundOver) return;
       const seat = engine.currentSeat;
+      if (online) {
+        if (seat.id === mySeatId) showHumanTurn();
+        else {
+          const hint = document.createElement('p');
+          hint.className = 'empty-hint';
+          hint.textContent = `Esperando a ${seat.label}…`;
+          actionsEl.appendChild(hint);
+        }
+        return;
+      }
       if (seat.type === 'bot') scheduleBotTurn();
       else showHumanTurn();
     }
@@ -287,7 +318,8 @@
       log(`${seatById(seatId).label} robó una carta.`);
       renderPiles();
       renderHands();
-      if (seatById(seatId).type === 'human') showHumanTurn();
+      const isMine = online ? seatId === mySeatId : seatById(seatId).type === 'human';
+      if (isMine) showHumanTurn();
     });
     engine.bus.on('card-played', ({ seatId, card, chosenColor }) => {
       log(`${seatById(seatId).label} jugó ${cardLabel(card, chosenColor)}.`);
@@ -377,6 +409,7 @@
     name: 'UNO',
     tagline: 'Descarta tus cartas por color o número antes que nadie. No olvides cantar ¡UNO!',
     tag: 'CARTAS · 2 A 8 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="10" y="6" width="26" height="38" rx="5" fill="#c1443c" stroke="#2b1c12" stroke-opacity="0.3" transform="rotate(-10 23 25)"/>
       <rect x="20" y="10" width="26" height="38" rx="5" fill="#12291d" stroke="#2b1c12" stroke-opacity="0.3" transform="rotate(8 33 29)"/>

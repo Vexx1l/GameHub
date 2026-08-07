@@ -6,15 +6,27 @@
     const seats = config.seats;
     const engine = new TatetiEngine(seats);
     const autoplay = global.GameHub.createAutoplay({ storageKey: 'autoplay:tateti', delay: 1800 });
-    const hasBots = seats.some((s) => s.type === 'bot');
+    const online = config.online || null; // NetSession si es una partida online, si no null
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
+    const hasBots = !online && seats.some((s) => s.type === 'bot');
     let botTimer = null;
     let destroyed = false;
+
+    // En online, cada dispositivo corre su propio engine pero sólo aplica una
+    // jugada cuando llega confirmada por la red (ver netplay.js) — así todos
+    // quedan sincronizados sin mandar el tablero entero por la red.
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Ta-Te-Ti</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
         ${hasBots ? `
           <div class="speed-control">
@@ -79,12 +91,19 @@
         btn.addEventListener('click', () => {
           const seat = seatFor(engine.turnSeatId);
           if (seat.type !== 'human') return;
-          engine.play(seat.id, Number(btn.dataset.index));
+          const index = Number(btn.dataset.index);
+          if (online) {
+            if (seat.id !== mySeatId) return; // no es tu asiento: no podés jugarlo
+            online.submitAction('play', [seat.id, index]);
+            return;
+          }
+          engine.play(seat.id, index);
         });
       });
     }
 
     function scheduleBotMove() {
+      if (online) return; // sin bots en partidas online
       clearTimeout(botTimer);
       const seat = seatFor(engine.turnSeatId);
       if (seat.type !== 'bot') return;
@@ -178,6 +197,7 @@
     name: 'Ta-Te-Ti',
     tagline: 'El clásico tres en línea. Rápido, simple y siempre a mano para una revancha.',
     tag: 'MESA · 2 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M20 8 V48 M36 8 V48 M8 20 H48 M8 36 H48" stroke="#F6EFDD" stroke-width="2.4" stroke-linecap="round"/>
       <path d="M13 13 L27 27 M27 13 L13 27" stroke="#d9a441" stroke-width="2.6" stroke-linecap="round"/>

@@ -6,16 +6,31 @@
     const seats = config.seats;
     const engine = new BingoEngine(seats);
     const autoplay = global.GameHub.createAutoplay({ storageKey: 'autoplay:bingo', delay: 3000 });
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
+    // Bingo no tiene "turnos": cualquier jugador sentado puede cantar la
+    // próxima bola. En online, sólo el anfitrión corre el modo automático
+    // (si cada dispositivo programara su propio timer, cantarían varias
+    // bolas de más por intervalo); el resto puede cantar manualmente.
+    const canAct = online ? !!mySeatId : true;
+    const canAutoDrive = online ? online.isHost : true;
     const hasHuman = seats.some((s) => s.type === 'human');
     let autoBallTimer = null;
-    let autoBallOn = !hasHuman; // sin humanos (modo espectador), canta solo
+    let autoBallOn = online ? false : !hasHuman; // sin humanos (modo espectador), canta solo
     let destroyed = false;
+
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Bingo</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
         <div class="speed-control">
           <label class="pill" for="bg-speed">Velocidad</label>
@@ -104,7 +119,7 @@
     function renderActions() {
       actionsEl.innerHTML = '';
       if (engine.roundOver) return;
-      if (hasHuman) {
+      if (canAct) {
         const btn = document.createElement('button');
         btn.className = 'btn btn-primary';
         btn.textContent = 'Cantar bola';
@@ -112,16 +127,23 @@
         btn.addEventListener('click', drawStep);
         actionsEl.appendChild(btn);
 
-        const label = document.createElement('label');
-        label.className = 'autoplay-toggle';
-        label.innerHTML = `<input type="checkbox" ${autoBallOn ? 'checked' : ''}> <span>Cantar automáticamente</span>`;
-        label.querySelector('input').addEventListener('change', (e) => {
-          autoBallOn = e.target.checked;
-          renderActions();
-          if (autoBallOn) scheduleAutoBall();
-          else clearTimeout(autoBallTimer);
-        });
-        actionsEl.appendChild(label);
+        if (canAutoDrive) {
+          const label = document.createElement('label');
+          label.className = 'autoplay-toggle';
+          label.innerHTML = `<input type="checkbox" ${autoBallOn ? 'checked' : ''}> <span>Cantar automáticamente</span>`;
+          label.querySelector('input').addEventListener('change', (e) => {
+            autoBallOn = e.target.checked;
+            renderActions();
+            if (autoBallOn) scheduleAutoBall();
+            else clearTimeout(autoBallTimer);
+          });
+          actionsEl.appendChild(label);
+        } else if (online) {
+          const hint = document.createElement('p');
+          hint.className = 'empty-hint';
+          hint.textContent = 'El modo automático lo controla el anfitrión de la sala.';
+          actionsEl.appendChild(hint);
+        }
       } else {
         const hint = document.createElement('p');
         hint.className = 'empty-hint';
@@ -132,6 +154,7 @@
 
     function drawStep() {
       if (engine.roundOver) return;
+      if (online) { online.submitAction('drawNext', []); return; }
       engine.drawNext();
     }
 
@@ -228,6 +251,7 @@
     name: 'Bingo',
     tagline: 'El clásico Bingo de 75 bolas: completa una línea o el cartón entero antes que nadie.',
     tag: 'CLÁSICO · 1 A 8 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="8" y="10" width="40" height="36" rx="6" fill="#F6EFDD" stroke="var(--wood-500)" stroke-width="2"/>
       <circle cx="17" cy="20" r="3" fill="var(--ember-500)"/>

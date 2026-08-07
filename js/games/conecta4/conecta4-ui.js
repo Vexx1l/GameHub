@@ -7,15 +7,24 @@
     const seats = config.seats;
     const engine = new Conecta4Engine(seats);
     const autoplay = global.GameHub.createAutoplay({ storageKey: 'autoplay:conecta4', delay: 1800 });
-    const hasBots = seats.some((s) => s.type === 'bot');
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
+    const hasBots = !online && seats.some((s) => s.type === 'bot');
     let botTimer = null;
     let destroyed = false;
+
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Conecta 4</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
         ${hasBots ? `
           <div class="speed-control">
@@ -82,7 +91,13 @@
         btn.addEventListener('click', () => {
           const seat = seatFor(engine.turnSeatId);
           if (seat.type !== 'human') return;
-          engine.drop(seat.id, Number(btn.dataset.col));
+          const col = Number(btn.dataset.col);
+          if (online) {
+            if (seat.id !== mySeatId) return;
+            online.submitAction('drop', [seat.id, col]);
+            return;
+          }
+          engine.drop(seat.id, col);
         });
       });
     }
@@ -102,6 +117,7 @@
     }
 
     function scheduleBotMove() {
+      if (online) return;
       clearTimeout(botTimer);
       const seat = seatFor(engine.turnSeatId);
       if (seat.type !== 'bot') return;
@@ -194,6 +210,7 @@
     name: 'Conecta 4',
     tagline: 'Deja caer tus fichas y arma 4 en línea antes que tu rival — horizontal, vertical o en diagonal.',
     tag: 'MESA · 2 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="6" y="10" width="44" height="36" rx="6" fill="#3e6fb0"/>
       <circle cx="16" cy="20" r="5" fill="#0d1f16"/>

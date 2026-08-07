@@ -144,7 +144,7 @@
       categories.forEach((cat) => QUESTION_BANK[cat].forEach((q) => pool.push({ category: cat, question: q })));
       let available = pool.filter((p) => !this.usedQuestions.has(p.category + '|' + p.question.q));
       if (!available.length) { this.usedQuestions.clear(); available = pool; }
-      const choice = available[Math.floor(Math.random() * available.length)];
+      const choice = global.GameHub.Dice.shuffle(available)[0];
       this.usedQuestions.add(choice.category + '|' + choice.question.q);
       return choice;
     }

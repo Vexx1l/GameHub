@@ -15,19 +15,28 @@
     const engine = new DominoEngine(seats);
     const spectatorMode = seats.every((s) => s.type === 'bot');
     const autoplay = global.GameHub.createAutoplay({ storageKey: 'autoplay:domino', delay: 3000 });
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
     let botTimer = null;
     let destroyed = false;
+
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Dominó</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
-        <div class="speed-control">
+        ${online ? '' : `<div class="speed-control">
           <label class="pill" for="do-speed">Velocidad bots</label>
           <input type="range" id="do-speed" min="150" max="1600" step="50" value="${config.speed || 650}">
-        </div>
+        </div>`}
       </div>
       <div class="domino-layout">
         <div class="panel domino-hands" id="do-hands"></div>
@@ -80,7 +89,7 @@
     function renderHands() {
       handsEl.innerHTML = seats.map((s) => {
         const hand = engine.hands[s.id];
-        const reveal = s.type === 'human' || spectatorMode;
+        const reveal = online ? (s.id === mySeatId || spectatorMode) : (s.type === 'human' || spectatorMode);
         const tilesHTML = reveal
           ? hand.map((t) => tileHTML(t)).join('')
           : hand.map(() => '<div class="domino-tile tile-back"></div>').join('');
@@ -121,6 +130,7 @@
         btn.className = 'btn btn-primary';
         btn.textContent = `Robar del pozo (${engine.boneyard.length} fichas)`;
         btn.addEventListener('click', () => {
+          if (online) { online.submitAction('drawUntilPlayable', [seatId]); return; }
           engine.drawUntilPlayable(seatId);
           renderHands();
           showHumanTurn();
@@ -132,7 +142,7 @@
         const btn = document.createElement('button');
         btn.className = 'btn btn-danger';
         btn.textContent = 'Pasar turno';
-        btn.addEventListener('click', () => engine.pass(seatId));
+        btn.addEventListener('click', () => (online ? online.submitAction('pass', [seatId]) : engine.pass(seatId)));
         movesEl.appendChild(btn);
         return;
       }
@@ -143,6 +153,7 @@
         btn.innerHTML = `${tileHTML(m.tile)} <span>${sideLabel || 'Primera ficha'}</span>`;
         btn.addEventListener('click', () => {
           clearMoves();
+          if (online) { online.submitAction('playMove', [seatId, m]); return; }
           engine.playMove(seatId, m);
         });
         movesEl.appendChild(btn);
@@ -150,6 +161,7 @@
     }
 
     function scheduleBotTurn() {
+      if (online) return;
       clearTimeout(botTimer);
       const delay = Number(speedInput.value);
       botTimer = setTimeout(() => {
@@ -177,6 +189,17 @@
       clearMoves();
       if (engine.roundOver) return;
       const seat = engine.currentSeat;
+      if (online) {
+        if (seat.id === mySeatId) {
+          showHumanTurn();
+        } else {
+          const hint = document.createElement('p');
+          hint.className = 'empty-hint';
+          hint.textContent = `Esperando a ${seat.label}…`;
+          movesEl.appendChild(hint);
+        }
+        return;
+      }
       if (seat.type === 'bot') {
         scheduleBotTurn();
       } else {
@@ -185,7 +208,12 @@
     }
 
     engine.bus.on('turn-changed', handleTurnStart);
-    engine.bus.on('drew-tiles', ({ seatId, count }) => log(`${seatById(seatId).label} robó ${count} ficha(s) del pozo.`));
+    engine.bus.on('drew-tiles', ({ seatId, count }) => {
+      log(`${seatById(seatId).label} robó ${count} ficha(s) del pozo.`);
+      renderHands();
+      const isMine = online ? seatId === mySeatId : seatById(seatId).type === 'human';
+      if (isMine) showHumanTurn();
+    });
     engine.bus.on('passed', ({ seatId }) => log(`${seatById(seatId).label} no tiene jugada y pasa.`));
     engine.bus.on('move-played', ({ seatId, move }) => {
       log(`${seatById(seatId).label} jugó [${move.tile[0]}|${move.tile[1]}].`);
@@ -260,6 +288,7 @@
     name: 'Dominó',
     tagline: 'Ficha doble-seis clásica, mesa cerrada o con pozo para robar.',
     tag: 'CLÁSICO · 2 O 4 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="6" y="14" width="44" height="28" rx="6" fill="#1B3327" stroke="#F6EFDD" stroke-opacity="0.2"/>
       <line x1="28" y1="14" x2="28" y2="42" stroke="#F6EFDD" stroke-opacity="0.3"/>

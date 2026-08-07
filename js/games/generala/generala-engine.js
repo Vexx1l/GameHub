@@ -104,7 +104,7 @@
 
     roll(seatId) {
       if (this.roundOver || seatId !== this.currentSeat.id || this.phase !== 'rolling' || this.rollsLeft <= 0) return null;
-      for (let i = 0; i < 5; i++) { if (!this.held[i]) this.dice[i] = 1 + Math.floor(Math.random() * 6); }
+      for (let i = 0; i < 5; i++) { if (!this.held[i]) this.dice[i] = global.GameHub.Dice.roll(); }
       this.rollsLeft -= 1;
       this.rollCount += 1;
       if (this.rollsLeft === 0) this.phase = 'choosing-category';

@@ -37,9 +37,10 @@
   }
 
   BastaEngine.prototype.pickLetter = function () {
+    const Dice = global.GameHub.Dice;
     let letter;
     do {
-      letter = LETTERS[Math.floor(Math.random() * LETTERS.length)];
+      letter = Dice.shuffle(LETTERS)[0];
     } while (letter === this.lastLetter && LETTERS.length > 1);
     this.lastLetter = letter;
     return letter;

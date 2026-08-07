@@ -56,22 +56,36 @@
 
   function mount(container, config) {
     const bus = new global.GameHub.EventBus();
-    const seats = config.seats; // [{color,type,difficulty,label}]
+    const seats = config.seats; // [{id,color,type,difficulty,label}]
     const engine = new ParquesEngine(seats);
     const lookups = buildCellTypeLookup();
+    const online = config.online || null;
+    const mySeatId = online ? seats.find((s) => s.playerId === online.playerId)?.id : null;
     let botTimer = null;
     let destroyed = false;
+
+    // En online, cada dispositivo corre su propio engine pero sólo aplica una
+    // jugada cuando llega confirmada por la red (ver netplay.js). Como
+    // `rollDice()` consume el generador de azar con semilla compartida
+    // (Dice.rollPair, ver js/core/dice.js), todos los dispositivos obtienen
+    // el mismo resultado sin tener que mandarlo por la red.
+    if (online) {
+      online.onAction((method, args) => {
+        if (typeof engine[method] === 'function') engine[method](...args);
+      });
+    }
 
     container.innerHTML = `
       <div class="game-topbar">
         <div class="left">
           <button class="back-btn" aria-label="Volver al hub" title="Volver">←</button>
           <h2>Parqués</h2>
+          ${online ? `<span class="pill">Sala ${online.code}${mySeatId ? '' : ' — espectador'}</span>` : ''}
         </div>
-        <div class="speed-control">
+        ${online ? '' : `<div class="speed-control">
           <label class="pill" for="pq-speed">Velocidad bots</label>
           <input type="range" id="pq-speed" min="150" max="1600" step="50" value="${config.speed || 650}">
-        </div>
+        </div>`}
       </div>
       <div class="parques-layout">
         <div class="panel parques-board-wrap">
@@ -191,6 +205,11 @@
         btn.textContent = describeMove(m);
         btn.addEventListener('click', () => {
           clearMoves();
+          if (online) {
+            if (engine.currentSeat.id !== mySeatId) return;
+            online.submitAction('applyMove', [m]);
+            return;
+          }
           engine.applyMove(m);
         });
         movesEl.appendChild(btn);
@@ -198,6 +217,7 @@
     }
 
     function scheduleBotRoll() {
+      if (online) return;
       clearTimeout(botTimer);
       const delay = Number(speedInput.value);
       botTimer = setTimeout(() => {
@@ -210,6 +230,14 @@
       renderTurnIndicator();
       clearMoves();
       const seat = engine.currentSeat;
+      if (online) {
+        rollBtn.disabled = seat.id !== mySeatId;
+        if (rollBtn.disabled) {
+          clearMoves();
+          movesEl.innerHTML = `<p class="empty-hint">Esperando a ${seat.label}…</p>`;
+        }
+        return;
+      }
       if (seat.type === 'bot') {
         rollBtn.disabled = true;
         scheduleBotRoll();
@@ -228,8 +256,13 @@
       renderDice(dice);
       const seat = seatByColor(color);
       log(`${seat.label} tiró ${dice[0]} y ${dice[1]}.`);
+      rollBtn.disabled = true;
+      if (online) {
+        if (seat.id === mySeatId) showHumanMoves(moves);
+        else clearMoves();
+        return;
+      }
       if (seat.type === 'bot') {
-        rollBtn.disabled = true;
         if (moves.length) {
           const move = ParquesBot.chooseMove(engine, moves, seat.difficulty || 'normal');
           const delay = Number(speedInput.value);
@@ -239,7 +272,6 @@
           }, delay);
         }
       } else {
-        rollBtn.disabled = true;
         showHumanMoves(moves);
       }
     });
@@ -271,13 +303,19 @@
             <span class="seat-name">${i + 1}. ${seatByColor(c).label}</span>
           </div>`).join('')}
         <div class="setup-actions">
-          <button class="btn btn-ghost" id="pq-again">Jugar otra vez</button>
+          ${online ? '' : '<button class="btn btn-ghost" id="pq-again">Jugar otra vez</button>'}
           <button class="btn btn-primary" id="pq-exit">Volver al hub</button>
         </div>
       `;
       victoryOverlay.hidden = false;
       victoryCard.querySelector('#pq-exit').addEventListener('click', () => config.onExit());
-      victoryCard.querySelector('#pq-again').addEventListener('click', () => {
+      // En online no ofrecemos "jugar otra vez" acá: remontar el juego
+      // volvería a suscribirse a las jugadas ya guardadas en la sala
+      // (netplay.js las reproduce todas al reconectar) y arrancaría desde
+      // ahí en vez de en limpio. Para otra partida, mejor armar una sala
+      // nueva desde el hub.
+      const againBtn = victoryCard.querySelector('#pq-again');
+      if (againBtn) againBtn.addEventListener('click', () => {
         victoryOverlay.hidden = true;
         instance.destroy();
         const next = mount(container, config);
@@ -287,6 +325,11 @@
 
     rollBtn.addEventListener('click', () => {
       rollBtn.disabled = true;
+      if (online) {
+        if (engine.currentSeat.id !== mySeatId) return;
+        online.submitAction('rollDice', []);
+        return;
+      }
       engine.rollDice();
     });
 
@@ -310,6 +353,7 @@
     name: 'Parqués',
     tagline: 'El clásico juego de mesa de tablero cruzado, dados y capturas.',
     tag: 'CLÁSICO · 2-4 JUGADORES',
+    online: true,
     icon: `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="4" y="4" width="48" height="48" rx="10" fill="#3B2A20"/>
       <rect x="10" y="10" width="16" height="16" rx="4" fill="var(--player-red)"/>

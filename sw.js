@@ -2,7 +2,7 @@
 // Cachea todos los archivos del hub para que funcione offline
 // y pueda instalarse como app.
 
-const CACHE_NAME = "noche-de-juegos-v7";
+const CACHE_NAME = "noche-de-juegos-v9";
 
 const FILES_TO_CACHE = [
   "./",
@@ -41,6 +41,9 @@ const FILES_TO_CACHE = [
   "./js/core/event-bus.js",
   "./js/core/game-registry.js",
   "./js/core/storage.js",
+  "./js/core/firebase-config.js",
+  "./js/core/netplay.js",
+  "./js/core/netplay-ui.js",
   "./js/games/ahorcado/ahorcado-bot.js",
   "./js/games/ahorcado/ahorcado-engine.js",
   "./js/games/ahorcado/ahorcado-ui.js",
