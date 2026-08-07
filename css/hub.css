@@ -126,6 +126,8 @@
 .chip.active { background: var(--gold-500); color: #2b1c0d; border-color: transparent; font-weight: 700; }
 .chip.fav-chip { color: var(--gold-500); }
 .chip.fav-chip.active { color: #2b1c0d; }
+.chip.online-chip { color: #6fb3e0; }
+.chip.online-chip.active { background: #6fb3e0; color: #0d1f2b; }
 
 .empty-state {
   max-width: 1080px; margin: var(--space-5) auto; text-align: center;
@@ -195,6 +197,11 @@
 .game-box .box-footer {
   display: flex; align-items: center; justify-content: space-between;
   margin-top: var(--space-4);
+  gap: 8px;
+}
+.game-box .box-footer-left {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  min-width: 0;
 }
 .game-box .box-tag {
   font-family: var(--font-mono); font-size: 0.7rem; color: var(--gold-500);
@@ -217,6 +224,16 @@
 }
 .fav-btn:hover { transform: scale(1.08); color: var(--gold-500); }
 .fav-btn.active { color: var(--gold-500); background: rgba(217,164,65,0.16); border-color: rgba(217,164,65,0.4); }
+
+/* ============ Insignia "tiene multijugador online" (en el pie de la tarjeta) ============ */
+.online-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  border-radius: 999px; padding: 3px 8px;
+  font-family: var(--font-mono); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px;
+  border: 1px solid rgba(111,179,224,0.4);
+  background: rgba(111,179,224,0.16);
+  color: #a6d4f0;
+}
 
 /* ============ Panel de configuración de partida ============ */
 .setup-overlay {
