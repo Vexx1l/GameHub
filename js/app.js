@@ -15,6 +15,7 @@
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
     moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>',
     starOutline: '<path d="M12 3.5l2.47 5.36 5.78.55-4.36 3.98 1.28 5.86L12 16.2l-5.17 3.05 1.28-5.86-4.36-3.98 5.78-.55L12 3.5Z"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.7 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.7-3.8-9s1.3-6.5 3.8-9Z"/>',
     expand: '<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>',
     compress: '<path d="M9 3v3a2 2 0 0 1-2 2H4M15 3v3a2 2 0 0 0 2 2h3M9 21v-3a2 2 0 0 0-2-2H4M15 21v-3a2 2 0 0 1 2-2h3"/>',
   };
@@ -54,6 +55,7 @@
     let searchTerm = '';
     let selectedCategory = 'todos';
     let favoritesOnly = false;
+    let onlineOnly = false;
 
     function showHub() {
       hubScreen.classList.add('active');
@@ -85,6 +87,7 @@
       const term = normalize(searchTerm);
       return games.filter((g) => {
         if (favoritesOnly && !Storage.isFavorite(g.id)) return false;
+        if (onlineOnly && !g.online) return false;
         if (selectedCategory !== 'todos' && categoryOf(g) !== selectedCategory) return false;
         if (term && !normalize(g.name).includes(term) && !normalize(g.tagline).includes(term) && !normalize(g.tag).includes(term)) return false;
         return true;
@@ -103,10 +106,19 @@
           <svg viewBox="0 0 24 24" width="14" height="14" fill="${favoritesOnly ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linejoin="round">${ICONS.starOutline}</svg>
           Favoritos
         </button>
+        <button type="button" class="chip online-chip ${onlineOnly ? 'active' : ''}" id="chip-online">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">${ICONS.globe}</svg>
+          Multijugador online
+        </button>
         ${chips.map((c) => `<button type="button" class="chip ${selectedCategory === c.key ? 'active' : ''}" data-key="${c.key}">${c.label}</button>`).join('')}
       `;
       chipsEl.querySelector('#chip-favorites').addEventListener('click', () => {
         favoritesOnly = !favoritesOnly;
+        renderChips();
+        renderShelf();
+      });
+      chipsEl.querySelector('#chip-online').addEventListener('click', () => {
+        onlineOnly = !onlineOnly;
         renderChips();
         renderShelf();
       });
@@ -158,7 +170,13 @@
             <p>${g.tagline}</p>
           </div>
           <div class="box-footer">
-            <span class="box-tag">${g.tag}</span>
+            <div class="box-footer-left">
+              <span class="box-tag">${g.tag}</span>
+              ${g.online ? `<span class="online-badge" title="Tiene multijugador online">
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">${ICONS.globe}</svg>
+                Online
+              </span>` : ''}
+            </div>
             <span class="pill">Jugar →</span>
           </div>
         </div>
