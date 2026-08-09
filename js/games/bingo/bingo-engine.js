@@ -94,32 +94,54 @@
       const number = this.pool.pop();
       this.drawn.push(number);
 
+      // Los cartones de los bots se marcan solos (no tienen que "estar
+      // atentos"), pero los cartones humanos ya NO se marcan automáticamente
+      // acá: el jugador tiene que tocar la casilla correcta él mismo con
+      // markCell() cuando escuche/vea que salió su número.
       this.seats.forEach((s) => {
+        if (s.type !== 'bot') return;
         const grid = this.cards[s.id];
         for (let r = 0; r < 5; r++) {
           for (let c = 0; c < 5; c++) {
             if (grid[r][c] === number) this.marks[s.id][r][c] = true;
           }
         }
+        this._checkSeat(s.id);
       });
 
       this.bus.emit('ball-drawn', { number, drawnCount: this.drawn.length });
-
-      if (!this.lineWinnerId) {
-        const lineSeat = this.seats.find((s) => checkLine(this.marks[s.id]));
-        if (lineSeat) {
-          this.lineWinnerId = lineSeat.id;
-          this.matchScores[lineSeat.id] += 10;
-          this.bus.emit('line-completed', { seatId: lineSeat.id });
-        }
-      }
-
-      const bingoSeat = this.seats.find((s) => checkFull(this.marks[s.id]));
-      if (bingoSeat) {
-        this.matchScores[bingoSeat.id] += 50;
-        this._endRound(bingoSeat.id);
-      }
       return number;
+    }
+
+    // El jugador marca a mano una casilla de SU propio cartón. Sólo se
+    // acepta si el número ya fue cantado, la casilla existe, no es la
+    // casilla libre y todavía no estaba marcada.
+    markCell(seatId, r, c) {
+      if (this.roundOver) return false;
+      const grid = this.cards[seatId];
+      const marks = this.marks[seatId];
+      if (!grid || !marks) return false;
+      const value = grid[r]?.[c];
+      if (value === undefined || value === 'FREE') return false;
+      if (marks[r][c]) return false;
+      if (!this.drawn.includes(value)) return false;
+      marks[r][c] = true;
+      this.bus.emit('cell-marked', { seatId, r, c, value });
+      this._checkSeat(seatId);
+      return true;
+    }
+
+    _checkSeat(seatId) {
+      if (this.roundOver) return;
+      if (!this.lineWinnerId && checkLine(this.marks[seatId])) {
+        this.lineWinnerId = seatId;
+        this.matchScores[seatId] += 10;
+        this.bus.emit('line-completed', { seatId });
+      }
+      if (checkFull(this.marks[seatId])) {
+        this.matchScores[seatId] += 50;
+        this._endRound(seatId);
+      }
     }
 
     _endRound(winnerId) {

@@ -95,25 +95,58 @@
       drawnEl.innerHTML = engine.drawn.slice().reverse().slice(1, 25).map((n) => `<span class="bg-chip">${letterFor(n)}${n}</span>`).join('');
     }
 
+    function isMyCard(seatId) {
+      return online ? seatId === mySeatId : seatById(seatId).type === 'human';
+    }
+
+    function tryMark(seatId, r, c) {
+      if (online) { online.submitAction('markCell', [seatId, r, c]); return; }
+      const ok = engine.markCell(seatId, r, c);
+      if (!ok) flashMiss(seatId, r, c);
+    }
+
+    function flashMiss(seatId, r, c) {
+      const cell = cardsEl.querySelector(`.bingo-card[data-seat="${seatId}"] .bg-cell[data-r="${r}"][data-c="${c}"]`);
+      if (!cell) return;
+      cell.classList.add('is-miss-flash');
+      setTimeout(() => cell.classList.remove('is-miss-flash'), 350);
+    }
+
     function renderCards() {
       cardsEl.innerHTML = seats.map((s) => {
         const grid = engine.cards[s.id];
         const marks = engine.marks[s.id];
         const wonLine = engine.lineWinnerId === s.id;
         const wonBingo = engine.bingoWinnerId === s.id;
+        const clickable = !engine.roundOver && isMyCard(s.id);
         return `
-        <div class="panel bingo-card ${wonBingo ? 'bg-card-won' : ''}">
+        <div class="panel bingo-card ${wonBingo ? 'bg-card-won' : ''}" data-seat="${s.id}">
           <div class="bingo-card-head">
             <span class="swatch" style="background:${s.hex}"></span>
-            <span class="seat-name">${s.label}</span>
+            <span class="seat-name">${s.label}${clickable ? ' (tu cartón — tocá el número al escucharlo)' : ''}</span>
             ${wonLine ? '<span class="pill bg-line-pill">Línea ✓</span>' : ''}
           </div>
           <div class="bingo-headers">${H.COLUMN_LETTERS.map((l) => `<span>${l}</span>`).join('')}</div>
           <div class="bingo-grid">
-            ${grid.map((row, r) => row.map((val, c) => `<span class="bg-cell ${marks[r][c] ? 'is-marked' : ''} ${val === 'FREE' ? 'is-free' : ''}">${val === 'FREE' ? '★' : val}</span>`).join('')).join('')}
+            ${grid.map((row, r) => row.map((val, c) => {
+              const marked = marks[r][c];
+              const isFree = val === 'FREE';
+              const canClick = clickable && !marked && !isFree;
+              return `<span class="bg-cell ${marked ? 'is-marked' : ''} ${isFree ? 'is-free' : ''} ${canClick ? 'is-clickable' : ''}" data-r="${r}" data-c="${c}" ${canClick ? 'role="button" tabindex="0"' : ''}>${isFree ? '★' : val}</span>`;
+            }).join('')).join('')}
           </div>
         </div>`;
       }).join('');
+
+      cardsEl.querySelectorAll('.bg-cell.is-clickable').forEach((cell) => {
+        const card = cell.closest('.bingo-card');
+        const seatId = card.dataset.seat;
+        const r = Number(cell.dataset.r);
+        const c = Number(cell.dataset.c);
+        const handler = () => tryMark(seatId, r, c);
+        cell.addEventListener('click', handler);
+        cell.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
+      });
     }
 
     function renderActions() {
@@ -172,6 +205,10 @@
     engine.bus.on('ball-drawn', ({ number, drawnCount }) => {
       log(`Bola cantada: ${letterFor(number)}${number} (#${drawnCount})`);
       renderCaller();
+      renderCards();
+    });
+    engine.bus.on('cell-marked', ({ seatId, value }) => {
+      log(`${seatById(seatId).label} marcó el ${value} en su cartón.`);
       renderCards();
     });
     engine.bus.on('line-completed', ({ seatId }) => {

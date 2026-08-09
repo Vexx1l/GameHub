@@ -22,13 +22,13 @@
  */
 (function (global) {
   const firebaseConfig = {
-    apiKey: 'AIzaSyBasvzCmphvrlGFtINxpro0q8B1oOSsgj0',
-    authDomain: 'gamehub-9f437.firebaseapp.com',
-    databaseURL: 'https://gamehub-9f437-default-rtdb.firebaseio.com',
-    projectId: 'gamehub-9f437',
-    storageBucket: 'gamehub-9f437.firebasestorage.app',
-    messagingSenderId: '493790854317',
-    appId: '1:493790854317:web:00ee3d3de5ebc8ef4f5a24',
+    apiKey: 'TU_API_KEY',
+    authDomain: 'TU_PROYECTO.firebaseapp.com',
+    databaseURL: 'https://TU_PROYECTO-default-rtdb.firebaseio.com',
+    projectId: 'TU_PROYECTO',
+    storageBucket: 'TU_PROYECTO.appspot.com',
+    messagingSenderId: '000000000000',
+    appId: '1:000000000000:web:xxxxxxxxxxxxxxxxxxxxxx',
   };
 
   // Se considera "configurado" si ya reemplazaste al menos el apiKey y la databaseURL.

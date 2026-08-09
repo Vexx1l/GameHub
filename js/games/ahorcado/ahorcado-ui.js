@@ -202,6 +202,12 @@
       if (engine.currentSeat.type === 'bot') scheduleBotTurn();
     }
 
+    engine.bus.on('round-started', ({ round, category, length }) => {
+      renderCategory();
+      renderFigure();
+      renderWord();
+      log(`— Ronda ${round}: categoría ${category} (${length} letras) —`);
+    });
     engine.bus.on('letter-hit', ({ seatId, letter, hits }) => {
       log(`${seatById(seatId).label} acertó la letra "${letter}" (+${hits * 5} pts).`);
       renderWord();
