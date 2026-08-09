@@ -52,6 +52,29 @@
 .bs-table td.is-unique { color: var(--gold-500); }
 .bs-table td.is-dup { color: var(--ink-300); }
 .bs-table td.is-invalid { color: var(--ember-500); }
+.bs-table td.is-objected { color: var(--ember-500); text-decoration: line-through; text-decoration-color: rgba(200,60,60,0.6); }
 .bs-empty { opacity: 0.5; }
+
+/* ============ Objeciones / votación sobre palabras dudosas ============ */
+.bs-challenges-title { margin-top: var(--space-4); }
+.bs-challenges { display: flex; flex-direction: column; gap: 10px; margin-top: var(--space-2); }
+.bs-challenge-row {
+  border: 1px solid rgba(246,239,221,0.12); border-radius: 8px; padding: 10px 12px;
+  background: rgba(0,0,0,0.15);
+}
+.bs-challenge-row.is-objected-row { border-color: rgba(200,60,60,0.4); background: rgba(200,60,60,0.08); }
+.bs-challenge-info { font-size: 0.9rem; margin-bottom: 8px; }
+.bs-challenge-info .swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.bs-challenge-votes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bs-voter { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--ink-300); }
+.bs-voter-name { white-space: nowrap; }
+.btn-vote {
+  font-family: var(--font-mono); font-size: 0.72rem; padding: 3px 8px; border-radius: 999px;
+  border: 1px solid rgba(246,239,221,0.25); background: transparent; color: var(--ink-200); cursor: pointer;
+}
+.btn-vote:disabled { opacity: 0.45; cursor: default; }
+.btn-vote.active-valid { background: rgba(120,180,110,0.25); border-color: rgba(120,180,110,0.6); color: #bfe6b4; }
+.btn-vote.active-invalid { background: rgba(200,60,60,0.25); border-color: rgba(200,60,60,0.6); color: #f0b7b0; }
+.bs-tally { color: var(--ink-300); font-size: 0.78rem; margin-left: auto; }
 
 .log { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-300); max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }

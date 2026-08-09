@@ -76,6 +76,62 @@
         </div>`).join('');
     }
 
+    function seatById(id) { return seats.find((s) => s.id === id); }
+
+    function voteOn(voterSeatId, category, targetSeatId, vote) {
+      if (online) { online.submitAction('voteAnswer', [voterSeatId, category, targetSeatId, vote]); return; }
+      engine.voteAnswer(voterSeatId, category, targetSeatId, vote);
+    }
+
+    function renderChallenges(result) {
+      // Lista todas las palabras que pasaron el chequeo automático (letra +
+      // no vacía) y que tienen al menos un humano habilitado para objetarlas.
+      const rows = [];
+      engine.categories.forEach((cat) => {
+        result.perCategory[cat].forEach((entry) => {
+          if (!entry.valid) return;
+          const eligible = seats.filter((s) => s.type === 'human' && s.id !== entry.seatId).map((s) => s.id);
+          if (!eligible.length) return;
+          rows.push({ cat, entry, eligible });
+        });
+      });
+      if (!rows.length) return '';
+
+      return `
+        <h3 class="bs-challenges-title">¿Alguna palabra no te convence?</h3>
+        <p class="empty-hint">Si la mayoría de los demás jugadores vota "no vale", esa palabra pasa a valer 0 puntos. El chequeo de letra/vacío no se vota.</p>
+        <div class="bs-challenges" id="bs-challenges">
+          ${rows.map(({ cat, entry, eligible }) => {
+            const author = seatById(entry.seatId);
+            const invalidCount = eligible.filter((id) => entry.votes[id] === 'invalid').length;
+            const objected = entry.effectiveValid === false;
+            return `
+            <div class="bs-challenge-row ${objected ? 'is-objected-row' : ''}">
+              <div class="bs-challenge-info">
+                <span class="swatch" style="background:${author.hex}"></span>
+                <b>${cat}:</b> "${entry.text}" — ${author.label}
+                <span class="mono">(${entry.points} pts${objected ? ', objetada por votación' : ''})</span>
+              </div>
+              <div class="bs-challenge-votes">
+                ${eligible.map((voterId) => {
+                  const voter = seatById(voterId);
+                  const myVote = entry.votes[voterId] || null;
+                  const canClick = online ? voterId === mySeatId : true;
+                  return `
+                    <div class="bs-voter">
+                      <span class="bs-voter-name">${voter.label}${online && voterId === mySeatId ? ' (vos)' : ''}:</span>
+                      <button type="button" class="btn-vote ${myVote === 'valid' ? 'active-valid' : ''}" data-voter="${voterId}" data-cat="${cat}" data-target="${entry.seatId}" data-vote="valid" ${canClick ? '' : 'disabled'}>Vale</button>
+                      <button type="button" class="btn-vote ${myVote === 'invalid' ? 'active-invalid' : ''}" data-voter="${voterId}" data-cat="${cat}" data-target="${entry.seatId}" data-vote="invalid" ${canClick ? '' : 'disabled'}>No vale</button>
+                    </div>`;
+                }).join('')}
+                <span class="mono bs-tally">${invalidCount}/${eligible.length} dicen que no vale</span>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      `;
+    }
+
     function pickBotWord(category, letter) {
       const bank = WORD_BANK[category] && WORD_BANK[category][letter];
       if (!bank || !bank.length) return '';
@@ -201,8 +257,6 @@
 
     function renderResults(result) {
       renderScores();
-      const caller = seats.find((s) => s.id === result.calledBy);
-      log(caller ? `¡BASTA! gritó ${caller.label} con la letra ${result.letter}.` : `Se acabó el tiempo con la letra ${result.letter}.`);
 
       const tableRows = engine.categories.map((cat) => `
         <tr>
@@ -210,7 +264,11 @@
           ${seats.map((s) => {
             const entry = result.perCategory[cat].find((e) => e.seatId === s.id);
             const text = entry.text || '<span class="bs-empty">—</span>';
-            return `<td class="${entry.valid ? (entry.points === 10 ? 'is-unique' : 'is-dup') : 'is-invalid'}">${text} <span class="mono">(${entry.points})</span></td>`;
+            let cls;
+            if (!entry.valid) cls = 'is-invalid';
+            else if (entry.effectiveValid === false) cls = 'is-objected';
+            else cls = entry.points === 10 ? 'is-unique' : 'is-dup';
+            return `<td class="${cls}">${text} <span class="mono">(${entry.points})</span></td>`;
           }).join('')}
         </tr>
       `).join('');
@@ -224,6 +282,7 @@
           </table>
         </div>
         <div id="bs-round-scores"></div>
+        ${renderChallenges(result)}
         <div class="setup-actions">
           <button class="btn btn-ghost" id="bs-exit">Volver al hub</button>
           <button class="btn btn-primary" id="bs-next-round">Jugar otra letra</button>
@@ -237,6 +296,15 @@
           <span class="mono">+${result.roundPoints[s.id]} esta ronda · ${engine.scores[s.id]} en total</span>
         </div>`).join('');
       roundEndOverlay.hidden = false;
+
+      roundEndCard.querySelectorAll('.btn-vote').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const { voter, cat, target, vote } = btn.dataset;
+          const entry = result.perCategory[cat].find((e) => e.seatId === target);
+          const current = entry.votes[voter] || null;
+          voteOn(voter, cat, target, current === vote ? null : vote); // click de nuevo = retirar el voto
+        });
+      });
 
       const startNext = () => {
         roundEndOverlay.hidden = true;
@@ -257,7 +325,14 @@
 
     engine.bus.on('round-ended', (result) => {
       global.GameHub.Storage.recordResult('basta', humanBeatBots(result) ? 'human-win' : 'bot-win');
+      const caller = seats.find((s) => s.id === result.calledBy);
+      log(caller ? `¡BASTA! gritó ${caller.label} con la letra ${result.letter}.` : `Se acabó el tiempo con la letra ${result.letter}.`);
       renderResults(result);
+    });
+    engine.bus.on('vote-updated', ({ category, targetSeatId, effectiveValid }) => {
+      const author = seatById(targetSeatId);
+      log(`Votación en "${category}": la palabra de ${author.label} ${effectiveValid === false ? 'quedó objetada (0 pts)' : 'sigue valiendo'}.`);
+      renderResults(engine.roundResult);
     });
 
     function humanBeatBots(result) {
@@ -328,7 +403,8 @@
     bullets: [
       'Cada ronda sortea una letra. Completa cada categoría (nombre, animal, color, etc.) con una palabra que empiece con esa letra.',
       'Cualquier jugador puede apretar "¡BASTA!" para terminar la ronda al instante — lo que no llegaste a escribir queda en blanco.',
-      'Palabra válida y que nadie más repitió = 10 puntos; válida pero repetida = 5 puntos; vacía o inválida = 0.',
+      'Palabra válida y que nadie más repitió = 10 puntos; válida pero repetida = 5 puntos; vacía, de una sola letra o que no empieza con la letra = 0.',
+      'Terminada la ronda, cualquier palabra puede ser objetada: si la mayoría de los demás jugadores vota "no vale", pasa a valer 0 puntos.',
       'El puntaje se acumula ronda tras ronda.',
     ],
   });
